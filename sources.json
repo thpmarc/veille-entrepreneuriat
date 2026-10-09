@@ -16,6 +16,7 @@
       "url": "https://entreprendreetinnover.com/feed/",
       "homepage": "https://entreprendreetinnover.com/",
       "lang": "fr",
+      "show_authors": false,
       "max_items": 15
     },
     {
@@ -48,6 +49,7 @@
       "url": "https://www.managementinternational.ca/feed/",
       "homepage": "https://www.managementinternational.ca/",
       "lang": "fr",
+      "show_authors": false,
       "max_items": 15
     },
 

@@ -4,9 +4,15 @@ on:
   schedule:
     - cron: "17 11 * * *"   # ~7 h 17 à Montréal en été (6 h 17 en hiver) ; GitHub peut décaler de quelques minutes
   workflow_dispatch:         # bouton « Run workflow » dans l'onglet Actions
+    inputs:
+      test_alert:
+        description: "Envoyer une alerte de test (reprend la parution de revue la plus récente)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write            # sauvegarde de l'archive sur la branche « data »
+  issues: write              # alertes « nouvelles parutions » (une issue assignée au propriétaire = un e-mail GitHub)
   pages: write
   id-token: write
   actions: write             # garde le planning actif (GitHub désactive les plannings inactifs depuis 60 jours)
@@ -40,7 +46,18 @@ jobs:
           python-version: "3.13"
 
       - name: Récupérer les sources et générer le site
-        run: python build_site.py
+        run: python build_site.py ${{ inputs.test_alert && '--test-alert' || '' }}
+
+      # Titre et texte de l'issue passent par des fichiers (jamais interpolés dans le shell) : les titres viennent de flux externes.
+      # Si la création échoue, l'alerte reste « pending » dans l'archive sauvegardée ci-dessous et repart au prochain passage.
+      - name: Alerte « nouvelles parutions »
+        if: hashFiles('data/alert.md') != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create --title "$(cat data/alert_title.txt)" --body-file data/alert.md --assignee "${{ github.repository_owner }}"
+          python build_site.py --ack-alerts
 
       - name: Sauvegarder l'archive
         run: |

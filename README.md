@@ -11,6 +11,10 @@ La page porte `noindex` : elle n'est pas destinée à être référencée par le
 - L'historique des articles (`archive.json`, `status.json`) vit sur la branche **`data`**, réduite à un seul commit
   réécrit chaque jour : `main` ne contient que le code. Si cette branche est supprimée, le workflow échoue
   volontairement (sinon l'historique repartirait de zéro sans prévenir).
+- **Alertes** : quand une nouvelle publication apparaît dans l'une des revues, le workflow ouvre une *issue* assignée au
+  propriétaire du dépôt et le mentionnant, ce qui déclenche l'e-mail (et la notification mobile) de GitHub. Une alerte dont
+  l'envoi échoue reste « pending » dans l'archive et repart au passage suivant. Test : *Run workflow* en cochant
+  « Envoyer une alerte de test ». (Aucune alerte au tout premier lancement : l'existant n'est pas « nouveau ».)
 - Une source en erreur n'empêche pas les autres : voir « État des sources » en bas de la page, et le journal du workflow.
 
 | Fichier | Rôle |

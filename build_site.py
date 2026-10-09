@@ -34,6 +34,8 @@ ARCHIVE_FILE = ROOT / "data" / "archive.json"
 STATUS_FILE = ROOT / "data" / "status.json"
 SITE_FILE = ROOT / "site" / "index.html"
 LOG_FILE = ROOT / "logs" / "update.log"
+ALERT_BODY = ROOT / "data" / "alert.md"             # lus par le workflow pour ouvrir une issue GitHub
+ALERT_TITLE = ROOT / "data" / "alert_title.txt"
 
 USER_AGENT = "VeilleEntrepreneuriat/1.0 (lecteur personnel de flux)"
 MAX_BYTES = 8_000_000
@@ -202,6 +204,8 @@ def fetch_rss(src: dict, _archive: dict) -> list[dict]:
                 t = clean_text(c.get("term") or "".join(c.itertext()))
                 if t and not re.match(r"(?i)(uncategorized|non classifi|sans cat|blog$)", norm(t)) and t not in tags:
                     tags.append(t)
+        if src.get("show_authors") is False:         # certains sites de revue n'indiquent que la personne qui poste l'article
+            authors = ""
         out.append({
             "title": title, "url": link, "summary": summary,
             "authors": clean_text(authors), "tags": tags[:3],
@@ -329,7 +333,8 @@ def local_day(published: str | None, date_only: bool) -> date | None:
     return dt.astimezone().date() if dt else None
 
 
-def merge(archive: dict, src: dict, fetched: list[dict], today: date, seed: bool, titles: dict, oldest: date) -> int:
+def merge(archive: dict, src: dict, fetched: list[dict], today: date, seed: bool, titles: dict, oldest: date,
+          alerts_on: bool = False) -> int:
     items, added = archive["items"], 0
     now_iso = datetime.now(timezone.utc).isoformat()
     # on filtre d'abord (mots-clés, ancienneté), puis on garde les plus récents
@@ -344,6 +349,8 @@ def merge(archive: dict, src: dict, fetched: list[dict], today: date, seed: bool
             for k in ("title", "summary", "authors", "tags"):
                 if f.get(k):
                     existing[k] = f[k]
+            if src.get("show_authors") is False:
+                existing["authors"] = ""
             if f.get("published") and not existing.get("published"):
                 existing["published"], existing["date_only"] = f["published"], f["date_only"]
             continue
@@ -358,6 +365,8 @@ def merge(archive: dict, src: dict, fetched: list[dict], today: date, seed: bool
                       "lang": src.get("lang", "fr"), "first_seen": first_seen, "added": now_iso}
         if src["kind"] == "news" and len(tk) >= 20:
             titles[tk] = key
+        if alerts_on and src["kind"] == "revue" and not seed:
+            items[key]["alert"] = "pending"             # « à envoyer » : reste en attente tant que l'issue n'est pas créée
         added += 1
     return added
 
@@ -568,6 +577,67 @@ def render(cfg: dict, archive: dict, status: dict, now: datetime) -> str:
                .replace("{{PANELS}}", panels).replace("{{FOOTER}}", footer))
 
 
+# --------------------------------------------------------------------------- alertes (nouvelles parutions des revues)
+
+def _md(text: str) -> str:
+    return re.sub(r"([\[\]])", r"\\\1", text)
+
+
+def write_alerts(cfg: dict, archive: dict, today: date, test: bool = False) -> int:
+    """Prépare le texte d'une issue GitHub pour les parutions « pending » ; supprime les fichiers s'il n'y en a pas."""
+    pending = [i for i in archive["items"].values() if i.get("alert") == "pending"]
+    if not pending:
+        ALERT_BODY.unlink(missing_ok=True)
+        ALERT_TITLE.unlink(missing_ok=True)
+        return 0
+    order = {s["id"]: n for n, s in enumerate(cfg["sources"])}
+    pending.sort(key=lambda i: i.get("published") or "", reverse=True)       # plus récent d'abord…
+    pending.sort(key=lambda i: order.get(i["source"], 99))                  # …revue par revue (tri stable)
+    owner, repo = os.environ.get("GITHUB_REPOSITORY_OWNER", ""), os.environ.get("GITHUB_REPOSITORY", "").split("/")[-1]
+    page = f"https://{owner}.github.io/{repo}/#revues" if owner and repo else ""
+
+    n = len(pending)
+    lines = []
+    if test:
+        lines += ["**Ceci est un test d'alerte.** Aucune nouvelle parution n'a été détectée : la publication la plus récente "
+                  "est reprise ci-dessous pour vérifier que cette notification vous parvient. Vous pouvez fermer cette issue.", ""]
+    lines.append(f"{'@' + owner + ', ' if owner else ''}{n} nouvelle{'s' if n > 1 else ''} publication{'s' if n > 1 else ''} "
+                 f"détectée{'s' if n > 1 else ''} dans vos revues (mise à jour du {fmt_short(today)}).")
+    current = None
+    for it in pending:
+        if it["name"] != current:
+            current = it["name"]
+            lines += ["", f"### {_md(current)}"]
+        pd = pub_day(it)
+        meta = " · ".join(filter(None, [it.get("authors"), f"paru le {fmt_short(pd)}" if pd else "", ", ".join(it.get("tags", []))]))
+        lines.append(f"- [{_md(it['title'])}]({it['url']})" + (f" — {meta}" if meta else ""))
+        if it.get("summary"):
+            lines.append(f"  > {it['summary']}")
+    if page:
+        lines += ["", f"Voir aussi la page complète : {page}"]
+    ALERT_BODY.parent.mkdir(parents=True, exist_ok=True)
+    ALERT_BODY.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    if n == 1:
+        title = f"{pending[0]['name']} : {pending[0]['title']}"
+        title = (title[:117] + "…") if len(title) > 118 else title
+        title = f"Nouvelle parution — {title}"
+    else:
+        title = f"{n} nouvelles parutions dans vos revues"
+    ALERT_TITLE.write_text(("Test d'alerte — " + title if test else title) + "\n", encoding="utf-8")
+    return n
+
+
+def ack_alerts(archive: dict) -> int:
+    """Appelé par le workflow APRÈS la création de l'issue : les alertes ne seront plus renvoyées."""
+    n = 0
+    for it in archive["items"].values():
+        if it.get("alert") == "pending":
+            it["alert"] = "sent"
+            n += 1
+    return n
+
+
 # --------------------------------------------------------------------------- main
 
 def wait_for_network(timeout: int = 90) -> bool:
@@ -589,6 +659,10 @@ def main() -> int:
     ap.add_argument("--if-stale", type=float, metavar="HEURES",
                     help="ne rien faire si la dernière mise à jour réussie date de moins de HEURES heures "
                          "(utilisé par la tâche planifiée, déclenchée à plusieurs moments : 7 h 30, ouverture de session, réveil)")
+    ap.add_argument("--ack-alerts", action="store_true",
+                    help="marque les alertes en attente comme envoyées (appelé par le workflow après la création de l'issue)")
+    ap.add_argument("--test-alert", action="store_true",
+                    help="met en attente la publication de revue la plus récente pour tester la chaîne d'alerte")
     args = ap.parse_args()
 
     LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -607,6 +681,14 @@ def main() -> int:
         status = {}
     now = datetime.now().astimezone()
     today = now.date()
+    if args.ack_alerts:
+        n = ack_alerts(archive)
+        write_atomic(ARCHIVE_FILE, json.dumps(archive, ensure_ascii=False, indent=1))
+        ALERT_BODY.unlink(missing_ok=True)
+        ALERT_TITLE.unlink(missing_ok=True)
+        log.info("%d alerte(s) marquée(s) comme envoyées", n)
+        return 0
+    alerts_on = bool(os.environ.get("GITHUB_ACTIONS"))     # les alertes n'ont de sens que dans le cloud (issues GitHub)
     meta = status.setdefault("_meta", {})
     if args.if_stale and not args.no_fetch and meta.get("last_run"):
         age = now - datetime.fromisoformat(meta["last_run"])
@@ -616,6 +698,10 @@ def main() -> int:
     seed = not archive["items"]
     titles = {title_key(i["title"]): k for k, i in archive["items"].items()
               if i["kind"] == "news" and len(title_key(i["title"])) >= 20}
+    if args.test_alert:
+        revues = [i for i in archive["items"].values() if i["kind"] == "revue"]
+        if revues:
+            max(revues, key=lambda i: sort_key(i, today))["alert"] = "pending"
 
     if not args.no_fetch:
         log.info("Mise à jour : %d sources%s", len(cfg["sources"]), " (premier lancement)" if seed else "")
@@ -626,7 +712,7 @@ def main() -> int:
             try:
                 fetched = FETCHERS[src["type"]](src, archive)
                 keep = cfg["settings"]["keep_days_revues" if src["kind"] == "revue" else "keep_days_news"]
-                added = merge(archive, src, fetched, today, seed, titles, today - timedelta(days=keep))
+                added = merge(archive, src, fetched, today, seed, titles, today - timedelta(days=keep), alerts_on)
                 st.update(ok=True, fetched=len(fetched), added=added, error="", last_success=now.isoformat())
                 log.info("  OK  %-34s %3d récupérés, %3d nouveaux", src["name"], len(fetched), added)
             except Exception as e:                   # une source en panne ne doit pas bloquer les autres
@@ -640,6 +726,10 @@ def main() -> int:
         write_atomic(ARCHIVE_FILE, json.dumps(archive, ensure_ascii=False, indent=1))
         write_atomic(STATUS_FILE, json.dumps(status, ensure_ascii=False, indent=1))
 
+    if alerts_on or args.test_alert:
+        n_alerts = write_alerts(cfg, archive, today, test=args.test_alert)
+        if n_alerts:
+            log.info("%d parution(s) de revue à signaler (voir %s)", n_alerts, ALERT_BODY.name)
     write_atomic(SITE_FILE, render(cfg, archive, status, now))
     log.info("Site généré : %s (%d éléments en archive)", SITE_FILE, len(archive["items"]))
     return 0
