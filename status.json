@@ -1,0 +1,96 @@
+{
+ "entreprendre-innover": {
+  "ok": true,
+  "fetched": 9,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-17T10:14:56.255568-04:00"
+ },
+ "revue-entrepreneuriat": {
+  "ok": true,
+  "fetched": 25,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-17T10:14:56.255568-04:00"
+ },
+ "gestion-hec": {
+  "ok": true,
+  "fetched": 11,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-17T10:14:56.255568-04:00"
+ },
+ "management-international": {
+  "ok": false,
+  "fetched": 10,
+  "added": 0,
+  "error": "ParseError: not well-formed (invalid token): line 1, column 119",
+  "last_success": "2026-10-15T11:37:40.591566-04:00"
+ },
+ "maddyness": {
+  "ok": true,
+  "fetched": 10,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-17T10:14:56.255568-04:00"
+ },
+ "frenchweb": {
+  "ok": true,
+  "fetched": 100,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-17T10:14:56.255568-04:00"
+ },
+ "jdn-startup": {
+  "ok": true,
+  "fetched": 60,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-17T10:14:56.255568-04:00"
+ },
+ "jdn-management": {
+  "ok": true,
+  "fetched": 60,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-17T10:14:56.255568-04:00"
+ },
+ "lapresse-affaires": {
+  "ok": true,
+  "fetched": 10,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-17T10:14:56.255568-04:00"
+ },
+ "lemonde-entreprises": {
+  "ok": true,
+  "fetched": 20,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-17T10:14:56.255568-04:00"
+ },
+ "gnews-fr": {
+  "ok": true,
+  "fetched": 100,
+  "added": 7,
+  "error": "",
+  "last_success": "2026-10-17T10:14:56.255568-04:00"
+ },
+ "gnews-qc": {
+  "ok": true,
+  "fetched": 20,
+  "added": 6,
+  "error": "",
+  "last_success": "2026-10-17T10:14:56.255568-04:00"
+ },
+ "entrepreneur-com": {
+  "ok": true,
+  "fetched": 10,
+  "added": 10,
+  "error": "",
+  "last_success": "2026-10-06T15:20:28.402624-04:00"
+ },
+ "_meta": {
+  "last_run": "2026-10-17T10:14:56.255568-04:00"
+ }
+}
