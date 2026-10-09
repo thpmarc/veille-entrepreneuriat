@@ -609,7 +609,8 @@ def write_alerts(cfg: dict, archive: dict, today: date, test: bool = False) -> i
             current = it["name"]
             lines += ["", f"### {_md(current)}"]
         pd = pub_day(it)
-        meta = " · ".join(filter(None, [it.get("authors"), f"paru le {fmt_short(pd)}" if pd else "", ", ".join(it.get("tags", []))]))
+        tags = [t for t in it.get("tags", []) if t not in it["title"]]          # ex. « Vol. 25 · n° 2 » déjà dans le titre
+        meta = " · ".join(filter(None, [it.get("authors"), f"paru le {fmt_short(pd)}" if pd else "", ", ".join(tags)]))
         lines.append(f"- [{_md(it['title'])}]({it['url']})" + (f" — {meta}" if meta else ""))
         if it.get("summary"):
             lines.append(f"  > {it['summary']}")
