@@ -1,0 +1,78 @@
+name: Mise à jour de la veille
+
+on:
+  schedule:
+    - cron: "17 11 * * *"   # ~7 h 17 à Montréal en été (6 h 17 en hiver) ; GitHub peut décaler de quelques minutes
+  workflow_dispatch:         # bouton « Run workflow » dans l'onglet Actions
+
+permissions:
+  contents: write            # sauvegarde de l'archive sur la branche « data »
+  pages: write
+  id-token: write
+  actions: write             # garde le planning actif (GitHub désactive les plannings inactifs depuis 60 jours)
+
+concurrency:
+  group: veille
+  cancel-in-progress: false
+
+env:
+  TZ: America/Toronto        # heures affichées sur la page, et « aujourd'hui / hier »
+  PYTHONUTF8: "1"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # L'archive (historique des articles) vit sur la branche « data », pas sur main :
+      # main reste propre, et un push depuis le PC ne peut pas entrer en conflit avec la mise à jour quotidienne.
+      - name: Restaurer l'archive
+        uses: actions/checkout@v7
+        with:
+          ref: data
+          path: state
+      - run: mkdir -p data && cp state/*.json data/
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Récupérer les sources et générer le site
+        run: python build_site.py
+
+      - name: Sauvegarder l'archive
+        run: |
+          cp data/archive.json data/status.json state/
+          cd state
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Archive inchangée"
+          else
+            # un seul commit, réécrit chaque jour : l'historique de l'archive n'a pas d'intérêt et le dépôt reste léger
+            git commit --amend -q -m "Archive du $(date +%F)"
+            git push --force origin HEAD:data
+          fi
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+      - name: Garder le planning actif
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow enable update.yml
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

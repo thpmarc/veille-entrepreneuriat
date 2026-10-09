@@ -1,0 +1,133 @@
+{
+  "settings": {
+    "site_title": "Veille entrepreneuriat",
+    "schedule_label": "chaque matin",
+    "keep_days_news": 90,
+    "keep_days_revues": 730,
+    "week_days": 7,
+    "revue_show": 8
+  },
+  "sources": [
+    {
+      "id": "entreprendre-innover",
+      "name": "Entreprendre & innover",
+      "kind": "revue",
+      "type": "rss",
+      "url": "https://entreprendreetinnover.com/feed/",
+      "homepage": "https://entreprendreetinnover.com/",
+      "lang": "fr",
+      "max_items": 15
+    },
+    {
+      "id": "revue-entrepreneuriat",
+      "name": "Revue de l'Entrepreneuriat",
+      "kind": "revue",
+      "type": "crossref",
+      "issn": "1766-2524",
+      "homepage": "https://www.cairn.info/revue-de-l-entrepreneuriat.htm",
+      "lang": "fr",
+      "max_items": 25
+    },
+    {
+      "id": "gestion-hec",
+      "name": "Revue Gestion (HEC Montréal)",
+      "kind": "revue",
+      "type": "revuegestion",
+      "pages": ["https://www.revuegestion.ca/entrepreneuriat/"],
+      "homepage": "https://www.revuegestion.ca",
+      "lang": "fr",
+      "delay": 2.5,
+      "max_page_fetches": 20,
+      "max_items": 15
+    },
+    {
+      "id": "management-international",
+      "name": "Management international",
+      "kind": "revue",
+      "type": "rss",
+      "url": "https://www.managementinternational.ca/feed/",
+      "homepage": "https://www.managementinternational.ca/",
+      "lang": "fr",
+      "max_items": 15
+    },
+
+    {
+      "id": "maddyness",
+      "name": "Maddyness",
+      "kind": "news",
+      "type": "rss",
+      "url": "https://www.maddyness.com/feed/",
+      "lang": "fr",
+      "max_items": 30
+    },
+    {
+      "id": "frenchweb",
+      "name": "FrenchWeb",
+      "kind": "news",
+      "type": "rss",
+      "url": "https://www.frenchweb.fr/feed",
+      "lang": "fr",
+      "filter": true,
+      "max_items": 30
+    },
+    {
+      "id": "jdn-startup",
+      "name": "JDN Start-up",
+      "kind": "news",
+      "type": "rss",
+      "url": "https://www.journaldunet.com/web-tech/start-up/rss/",
+      "lang": "fr",
+      "max_items": 30
+    },
+    {
+      "id": "jdn-management",
+      "name": "JDN Management",
+      "kind": "news",
+      "type": "rss",
+      "url": "https://www.journaldunet.com/management/rss/",
+      "lang": "fr",
+      "filter": true,
+      "max_items": 30
+    },
+    {
+      "id": "lapresse-affaires",
+      "name": "La Presse Affaires",
+      "kind": "news",
+      "type": "rss",
+      "url": "https://www.lapresse.ca/affaires/rss",
+      "lang": "fr",
+      "filter": true,
+      "max_items": 30
+    },
+    {
+      "id": "lemonde-entreprises",
+      "name": "Le Monde Entreprises",
+      "kind": "news",
+      "type": "rss",
+      "url": "https://www.lemonde.fr/entreprises/rss_full.xml",
+      "lang": "fr",
+      "filter": true,
+      "max_items": 30
+    },
+    {
+      "id": "gnews-fr",
+      "name": "Google Actualités · entrepreneuriat",
+      "kind": "news",
+      "type": "rss",
+      "aggregator": true,
+      "url": "https://news.google.com/rss/search?q=entrepreneuriat+when%3A7d&hl=fr&gl=FR&ceid=FR:fr",
+      "lang": "fr",
+      "max_items": 25
+    },
+    {
+      "id": "gnews-qc",
+      "name": "Google Actualités · entrepreneuriat Québec",
+      "kind": "news",
+      "type": "rss",
+      "aggregator": true,
+      "url": "https://news.google.com/rss/search?q=entrepreneuriat+Qu%C3%A9bec+when%3A7d&hl=fr-CA&gl=CA&ceid=CA:fr",
+      "lang": "fr",
+      "max_items": 25
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+# Généré : le site et l'archive sont produits par le workflow (archive sur la branche « data »)
+site/
+data/
+logs/
+__pycache__/
+
+# Spécifique au PC de l'auteur (chemins Windows locaux)
+installer_tache.ps1
+mettre_a_jour.bat
