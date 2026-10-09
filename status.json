@@ -1,0 +1,96 @@
+{
+ "entreprendre-innover": {
+  "ok": true,
+  "fetched": 9,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-10T12:15:40.533741-04:00"
+ },
+ "revue-entrepreneuriat": {
+  "ok": true,
+  "fetched": 25,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-10T12:15:40.533741-04:00"
+ },
+ "gestion-hec": {
+  "ok": true,
+  "fetched": 12,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-10T12:15:40.533741-04:00"
+ },
+ "management-international": {
+  "ok": true,
+  "fetched": 10,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-10T12:15:40.533741-04:00"
+ },
+ "maddyness": {
+  "ok": true,
+  "fetched": 10,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-10T12:15:40.533741-04:00"
+ },
+ "frenchweb": {
+  "ok": true,
+  "fetched": 100,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-10T12:15:40.533741-04:00"
+ },
+ "jdn-startup": {
+  "ok": true,
+  "fetched": 60,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-10T12:15:40.533741-04:00"
+ },
+ "jdn-management": {
+  "ok": true,
+  "fetched": 60,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-10T12:15:40.533741-04:00"
+ },
+ "lapresse-affaires": {
+  "ok": true,
+  "fetched": 10,
+  "added": 0,
+  "error": "",
+  "last_success": "2026-10-10T12:15:40.533741-04:00"
+ },
+ "lemonde-entreprises": {
+  "ok": true,
+  "fetched": 20,
+  "added": 1,
+  "error": "",
+  "last_success": "2026-10-10T12:15:40.533741-04:00"
+ },
+ "gnews-fr": {
+  "ok": true,
+  "fetched": 100,
+  "added": 8,
+  "error": "",
+  "last_success": "2026-10-10T12:15:40.533741-04:00"
+ },
+ "gnews-qc": {
+  "ok": true,
+  "fetched": 39,
+  "added": 5,
+  "error": "",
+  "last_success": "2026-10-10T12:15:40.533741-04:00"
+ },
+ "entrepreneur-com": {
+  "ok": true,
+  "fetched": 10,
+  "added": 10,
+  "error": "",
+  "last_success": "2026-10-06T15:20:28.402624-04:00"
+ },
+ "_meta": {
+  "last_run": "2026-10-10T12:15:40.533741-04:00"
+ }
+}
