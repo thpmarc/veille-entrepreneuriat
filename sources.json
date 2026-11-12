@@ -1,6 +1,7 @@
 {
   "settings": {
-    "site_title": "Veille entrepreneuriat",
+    "site_title": "Ma veille",
+    "site_kicker": "Entrepreneuriat · Reprise d’entreprise",
     "schedule_label": "chaque matin",
     "keep_days_news": 90,
     "keep_days_revues": 730,

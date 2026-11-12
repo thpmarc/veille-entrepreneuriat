@@ -1,4 +1,7 @@
-# Veille entrepreneuriat
+# Ma veille (entrepreneuriat, reprise d'entreprise…)
+
+Le titre et le surtitre de la page se règlent dans `sources.json` (`site_title`, `site_kicker`). Le dépôt et l'adresse
+de la page gardent le nom d'origine `veille-entrepreneuriat` (renommer le dépôt casserait l'ancienne adresse).
 
 Page unique (`site/index.html`) régénérée chaque matin par **GitHub Actions** et publiée sur **GitHub Pages** :
 <https://thpmarc.github.io/veille-entrepreneuriat/>. Python 3.13, bibliothèque standard uniquement : rien à installer.

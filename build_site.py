@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Veille entrepreneuriat : récupère les sources, met à jour l'archive, génère site/index.html.
+"""Ma veille (entrepreneuriat, reprise d'entreprise…) : récupère les sources, met à jour l'archive, génère site/index.html.
 
 Bibliothèque standard uniquement. Lancé chaque matin par GitHub Actions
 (.github/workflows/update.yml) ; peut aussi être lancé à la main :
@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import email.utils
+import hashlib
 import html
 import json
 import logging
@@ -508,8 +509,10 @@ def item_html(it: dict, today: date, week_start: date, show_date: bool) -> str:
     summary = f'<p class="sum">{esc(it["summary"])}</p>' if it.get("summary") else ""
     text = norm(" ".join([it["title"], it.get("summary", ""), it["name"], it.get("authors", ""), " ".join(it.get("tags", []))]))
     lang = ' lang="en"' if it.get("lang") == "en" else ""
+    rid = hashlib.sha1((it.get("key") or url_key(it["url"])).encode("utf-8")).hexdigest()[:12]   # identifiant stable pour « lu »
+    meta.append('<button type="button" class="rd" aria-pressed="false">Marquer lu</button>')
     return (
-        f'<article class="item" data-source="{esc(it["source"])}" data-text="{esc(text)}">'
+        f'<article class="item" data-id="{rid}" data-source="{esc(it["source"])}" data-text="{esc(text)}">'
         f'<div class="meta">{"".join(meta)}</div>'
         f'<h3><a href="{esc(it["url"])}" target="_blank" rel="noopener noreferrer"{lang}>{esc(it["title"])}</a></h3>'
         f'{authors}{summary}</article>')
@@ -661,7 +664,7 @@ def render(cfg: dict, archive: dict, status: dict, now: datetime) -> str:
 
     # --- en-tête et pied de page
     errors = [src["name"] for src in cfg["sources"] if status.get(src["id"], {}).get("ok") is False]
-    mast = (f'<header class="mast"><div class="wrap"><p class="kicker">Veille professionnelle</p>'
+    mast = (f'<header class="mast"><div class="wrap"><p class="kicker">{esc(s.get("site_kicker", "Veille professionnelle"))}</p>'
             f'<h1>{esc(s["site_title"])}</h1>'
             f'<p class="dateline">{esc(JOURS[today.weekday()].capitalize())} {fmt_long(today).split(" ", 1)[1]} {today.year}'
             f' · mis à jour à {now.strftime("%H:%M")} · prochaine mise à jour {esc(s["schedule_label"])}</p></div></header>')

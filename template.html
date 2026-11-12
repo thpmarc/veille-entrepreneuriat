@@ -78,6 +78,16 @@ html.js .panel:not(.on){display:none}
 .tag.new{background:var(--accent);color:var(--accent-ink)}
 .tag.lock{border:1px solid var(--rule);background:none;color:var(--muted)}
 
+/* « Lu » : l'élément reste en place mais s'atténue (état gardé dans ce navigateur) */
+.rd{display:none;margin-left:auto;font:inherit;letter-spacing:inherit;text-transform:none;color:var(--muted);background:none;
+  border:1px solid var(--rule);border-radius:99px;padding:1px 9px;cursor:pointer}
+html.js .rd{display:inline-block}
+.rd:hover{color:var(--ink);border-color:var(--muted)}
+.rd[aria-pressed=true]{background:var(--chip);color:var(--ink)}
+.item.read{opacity:.6;transition:opacity .15s}
+.item.read:hover,.item.read:focus-within{opacity:.9}
+.item.read h3 a{color:var(--muted)}
+
 /* Revues */
 .journal{margin-top:34px}
 .journal header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 16px;
@@ -156,6 +166,37 @@ html.js .panel:not(.on){display:none}
       var nm=p.querySelector('.nomatch'); if(nm) nm.hidden=!(total>0&&shown===0);
     });
   }
+
+  /* Éléments lus : mémorisés dans ce navigateur seulement (pas de synchronisation entre appareils) */
+  var KEY='veille-lus', read={};
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(read));}catch(e){}}
+  try{
+    read=JSON.parse(localStorage.getItem(KEY)||'{}')||{};
+    var old=Date.now()-760*864e5, purged=false;                  // les plus anciens ne sont plus dans l'archive
+    for(var k in read){ if(!(read[k]>old)){delete read[k];purged=true;} }
+    if(purged) save();
+  }catch(e){read={};}
+  function paint(it){
+    var on=!!read[it.dataset.id], b=it.querySelector('.rd');
+    it.classList.toggle('read',on);
+    if(b){b.setAttribute('aria-pressed',on); b.textContent=on?'Lu':'Marquer lu';}
+  }
+  function setRead(id,on){
+    if(on) read[id]=Date.now(); else delete read[id];
+    save();
+    [].forEach.call(document.querySelectorAll('.item[data-id="'+id+'"]'),paint);   // le même article peut figurer dans plusieurs onglets
+  }
+  [].forEach.call(document.querySelectorAll('.item'),paint);
+  document.addEventListener('click',function(e){
+    var btn=e.target.closest&&e.target.closest('.rd');
+    if(btn){var it=btn.closest('.item'); setRead(it.dataset.id,!read[it.dataset.id]); return;}
+    var a=e.target.closest&&e.target.closest('.item h3 a');
+    if(a) setRead(a.closest('.item').dataset.id,true);
+  });
+  document.addEventListener('auxclick',function(e){            // clic molette : ouverture dans un nouvel onglet
+    var a=e.button===1&&e.target.closest&&e.target.closest('.item h3 a');
+    if(a) setRead(a.closest('.item').dataset.id,true);
+  });
 
   tabs.forEach(function(t,i){
     t.addEventListener('click',function(){show(t.dataset.tab);});
