@@ -97,6 +97,14 @@ html.js .rd{display:inline-block}
 .ext:hover{text-decoration:underline}
 .note{margin:8px 0 0;font-size:.82rem;color:var(--muted)}
 
+/* Onglets-sections (Reprise MTL, Finance) : filtre par zone */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}
+.chip{font:600 .84rem/1 var(--sans);color:var(--muted);background:none;border:1px solid var(--rule);border-radius:99px;
+  padding:8px 14px;cursor:pointer}
+.chip:hover{color:var(--ink);border-color:var(--muted)}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.off{display:none!important}
+
 /* Reprise MTL */
 .grp{margin:46px 0 0;font:700 .74rem/1.2 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
 .grp+.journal{margin-top:14px}
@@ -188,6 +196,13 @@ html.js .rd{display:inline-block}
   }
   [].forEach.call(document.querySelectorAll('.item'),paint);
   document.addEventListener('click',function(e){
+    var chip=e.target.closest&&e.target.closest('.chip');      // filtre par zone dans un onglet-section
+    if(chip){
+      var pan=chip.closest('.panel'), g=chip.dataset.g;
+      [].forEach.call(pan.querySelectorAll('.chip'),function(c){c.setAttribute('aria-pressed',c===chip);});
+      [].forEach.call(pan.querySelectorAll('[data-gid]'),function(b){b.classList.toggle('off',!!g&&b.dataset.gid!==g);});
+      return;
+    }
     var btn=e.target.closest&&e.target.closest('.rd');
     if(btn){var it=btn.closest('.item'); setRead(it.dataset.id,!read[it.dataset.id]); return;}
     var a=e.target.closest&&e.target.closest('.item h3 a');

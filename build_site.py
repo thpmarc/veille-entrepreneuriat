@@ -402,8 +402,8 @@ def merge(archive: dict, src: dict, fetched: list[dict], today: date, seed: bool
                 existing["published"], existing["date_only"] = f["published"], f["date_only"]
             continue
         tk = title_key(f["title"])
-        tkey = f'{src["kind"]}:{tk}'                        # la presse et l'onglet « reprise » se dédoublonnent chacun de leur côté
-        dedupe = src["kind"] in ("news", "reprise") and len(tk) >= 20
+        tkey = f'{src["kind"]}:{tk}'                        # la presse et chaque onglet-section se dédoublonnent chacun de leur côté
+        dedupe = src["kind"] != "revue" and len(tk) >= 20
         if dedupe and tkey in titles:
             continue                                        # même article déjà vu via une autre source
         if first_run:   # premier lancement : on date la « découverte » à la parution, sinon tout serait « nouveau »
@@ -428,15 +428,21 @@ def merge(archive: dict, src: dict, fetched: list[dict], today: date, seed: bool
     return added
 
 
+def keep_days(settings: dict, kind: str) -> int:
+    """Durée de conservation : keep_days_revues pour les revues, keep_days_<type> pour un onglet-section, sinon celle de la presse."""
+    if kind == "revue":
+        return settings["keep_days_revues"]
+    return settings.get(f"keep_days_{kind}", settings["keep_days_news"])
+
+
 def prune(archive: dict, cfg: dict, today: date) -> int:
     s = cfg["settings"]
-    limits = {"news": today - timedelta(days=s["keep_days_news"]), "revue": today - timedelta(days=s["keep_days_revues"]),
-              "reprise": today - timedelta(days=s.get("keep_days_reprise", 120))}
     known = {src["id"] for src in cfg["sources"]}
     live = {src["id"] for src in cfg["sources"] if src.get("live")}     # annonces : retirées quand elles quittent le site, pas par l'âge
     drop = [k for k, it in archive["items"].items()
             if it["source"] not in known                      # source retirée de sources.json
-            or (it["source"] not in live and (eff_day(it, today) or today) < limits.get(it["kind"], limits["news"]))]
+            or (it["source"] not in live
+                and (eff_day(it, today) or today) < today - timedelta(days=keep_days(s, it["kind"])))]
     for k in drop:
         del archive["items"][k]
     return len(drop)
@@ -477,14 +483,19 @@ def fmt_short(d: date) -> str:
     return f"{d.day} {MOIS_ABR[d.month - 1]} {d.year}"
 
 
-def item_html(it: dict, today: date, week_start: date, show_date: bool) -> str:
+def item_html(it: dict, today: date, week_start: date, show_date: bool, new_from: date | None = None) -> str:
     pd = pub_day(it)
     meta = [f'<span class="src">{esc(it["name"])}</span>']
     if it["kind"] == "revue":
         if pd:
             meta.append(f"<span>Paru le {fmt_short(pd)}</span>")
-    elif it["kind"] == "reprise":                           # onglet sans regroupement par jour : toujours la date
-        if pd:
+    elif it["kind"] != "news":                              # onglet-section, sans regroupement par jour
+        if it.get("published") and not it.get("date_only"):
+            dt = min(parse_dt(it["published"]), datetime.now(timezone.utc)).astimezone()
+            label = (f"aujourd’hui {dt:%H:%M}" if dt.date() == today else f"hier {dt:%H:%M}"
+                     if dt.date() == today - timedelta(days=1) else fmt_short(dt.date()))
+            meta.append(f'<time datetime="{esc(dt.isoformat())}">{label}</time>')
+        elif pd:
             meta.append(f"<span>{fmt_short(pd)}</span>")
         elif not it.get("baseline"):
             meta.append(f"<span>Détectée le {fmt_short(date.fromisoformat(it['first_seen']))}</span>")
@@ -496,9 +507,9 @@ def item_html(it: dict, today: date, week_start: date, show_date: bool) -> str:
         meta.append(f'<time datetime="{esc(dt.isoformat())}">{label}</time>')
     elif pd:
         meta.append(f"<span>{fmt_short(pd)}</span>")
-    if it["kind"] in ("revue", "reprise") and not it.get("baseline"):
+    if it["kind"] != "news" and not it.get("baseline"):
         first = date.fromisoformat(it["first_seen"])
-        if first >= week_start:
+        if first >= (new_from or week_start):
             meta.append('<span class="tag new">Nouveau</span>')
     if it.get("lang") == "en":
         meta.append('<span class="tag">EN</span>')
@@ -538,7 +549,9 @@ def render(cfg: dict, archive: dict, status: dict, now: datetime) -> str:
             return now.astimezone(timezone.utc) - parse_dt(it["published"]) <= timedelta(hours=24)
         return it["_day"] == today
 
-    feed_items = [i for i in all_items if i["kind"] != "reprise"]          # l'onglet « Reprise MTL » a ses propres sections
+    tab_cfgs = s.get("tabs", [])                                            # onglets-sections : Reprise MTL, Finance…
+    section_kinds = {tb["kind"] for tb in tab_cfgs}
+    feed_items = [i for i in all_items if i["kind"] not in section_kinds]   # ils ont leurs propres sections
     in_week = sorted((i for i in feed_items if i["_day"] and week_start <= i["_day"] <= today),
                      key=lambda i: i["_sort"], reverse=True)
     in_today = sorted((i for i in feed_items if is_today(i)), key=lambda i: i["_sort"], reverse=True)
@@ -588,67 +601,87 @@ def render(cfg: dict, archive: dict, status: dict, now: datetime) -> str:
             f'<p class="note">{esc(" · ".join(notes))}</p>{body}</section>')
     revues_body = f'<p class="lede">{esc(intro)}</p>' + "".join(sections)
 
-    # --- panneau « Reprise MTL » : annonces, organismes et presse sur la reprise d'entreprise à Montréal
-    reprise_srcs = [src for src in cfg["sources"] if src["kind"] == "reprise"]
-    reprise_items = [i for i in all_items if i["kind"] == "reprise"]
-    new_reprise = sum(1 for i in reprise_items if not i.get("baseline") and date.fromisoformat(i["first_seen"]) >= week_start)
-    reprise_intro = (f"{new_reprise} nouveauté{'s' if new_reprise > 1 else ''} cette semaine sur les sites suivis."
-                     if new_reprise else "Aucune nouveauté cette semaine. Voici les dernières publications de chaque site suivi.")
-    reprise_html = [f'<p class="lede">{esc(reprise_intro)}</p>']
-    for grp in s.get("reprise_groups", []):
-        blocks = []
-        for src in (x for x in reprise_srcs if x.get("group") == grp["id"]):
-            mine = sorted((i for i in reprise_items if i["source"] == src["id"]), key=lambda i: i["_sort"], reverse=True)
-            st = status.get(src["id"], {})
-            notes = [src["note"]] if src.get("note") else []
-            if src.get("live"):
-                notes.append(f"{len(mine)} annonce{'s' if len(mine) > 1 else ''} en ligne")
-            else:
-                latest = max((pub_day(i) for i in mine if pub_day(i)), default=None)
-                if latest:
-                    notes.append(f"Dernière publication : {fmt_short(latest)}")
-            if st.get("ok") is False:
-                notes.append("source momentanément injoignable, dernières données connues")
-            elif st.get("last_success"):
-                notes.append("vérifiée " + ("aujourd’hui" if st["last_success"][:10] == today.isoformat()
-                                             else "le " + fmt_short(date.fromisoformat(st["last_success"][:10]))))
-            body = "".join(item_html(i, today, week_start, False) for i in mine[: src.get("show", s.get("reprise_show", 8))]) or \
-                '<p class="empty">Rien de récent pour le moment.</p>'
-            link = (f'<a class="ext" href="{esc(src["homepage"])}" target="_blank" rel="noopener noreferrer">Site ↗</a>'
-                    if src.get("homepage") else "")
-            blocks.append(f'<section class="journal" data-group><header><h2>{esc(src["name"])}</h2>{link}</header>'
-                          f'<p class="note">{esc(" · ".join(notes))}</p>{body}</section>')
-        if blocks:
-            reprise_html.append(f'<div data-group><h2 class="grp">{esc(grp["title"])}</h2>{"".join(blocks)}</div>')
-    manual = cfg.get("manual_sites", [])
-    if manual:
-        lis = "".join(f'<li><a href="{esc(m["url"])}" target="_blank" rel="noopener noreferrer">{esc(m["name"])} ↗</a>'
-                      f'<span>{esc(m.get("note", ""))}</span></li>' for m in manual)
-        reprise_html.append('<div class="manual"><h2 class="grp">À consulter à la main</h2>'
-                            '<p class="note">Ces sites n’offrent ni flux ni page lisible par robot : pas de mise à jour automatique.</p>'
-                            f'<ul>{lis}</ul></div>')
-    reprise_body = "".join(reprise_html)
+    # --- onglets-sections (Reprise MTL, Finance…) : une section par source, regroupées selon settings.tabs
+    def source_note(src: dict, mine: list[dict], st: dict) -> str:
+        notes = [src["note"]] if src.get("note") else []
+        if src.get("live"):
+            notes.append(f"{len(mine)} annonce{'s' if len(mine) > 1 else ''} en ligne")
+        else:
+            latest = max((pub_day(i) for i in mine if pub_day(i)), default=None)
+            if latest:
+                notes.append(f"Dernière publication : {fmt_short(latest)}")
+        if st.get("ok") is False:
+            notes.append("source momentanément injoignable, dernières données connues")
+        elif st.get("last_success"):
+            notes.append("vérifiée " + ("aujourd’hui" if st["last_success"][:10] == today.isoformat()
+                                         else "le " + fmt_short(date.fromisoformat(st["last_success"][:10]))))
+        return " · ".join(notes)
+
+    tab_buttons, tab_panels, tab_options = [], [], []
+    for tab in tab_cfgs:
+        tid, kind = tab["id"], tab["kind"]
+        tsrcs = [x for x in cfg["sources"] if x["kind"] == kind]
+        titems = [i for i in all_items if i["kind"] == kind]
+        days = tab.get("new_days", 7)
+        new_from = today - timedelta(days=days - 1)
+        period = "aujourd’hui" if days <= 1 else "cette semaine" if days == 7 else f"ces {days} derniers jours"
+        n_new = sum(1 for i in titems if not i.get("baseline") and date.fromisoformat(i["first_seen"]) >= new_from)
+        lede = (f"{n_new} nouveauté{'s' if n_new > 1 else ''} {period} sur les sites suivis." if n_new
+                else f"Aucune nouveauté {period}. Voici les dernières publications de chaque site suivi.")
+        parts = [f'<p class="lede">{esc(lede)}</p>']
+        groups_cfg = tab.get("groups", [])
+        if len(groups_cfg) > 1:
+            chips = "".join(f'<button type="button" class="chip" data-g="{esc(g["id"])}" aria-pressed="false">'
+                            f'{esc(g.get("chip", g["title"]))}</button>' for g in groups_cfg)
+            parts.append('<div class="chips" role="group" aria-label="Filtrer par zone">'
+                         f'<button type="button" class="chip" data-g="" aria-pressed="true">Tout</button>{chips}</div>')
+        for grp in groups_cfg:
+            blocks = []
+            for src in (x for x in tsrcs if x.get("group") == grp["id"]):
+                mine = sorted((i for i in titems if i["source"] == src["id"]), key=lambda i: i["_sort"], reverse=True)
+                shown = mine[: src.get("show", tab.get("show", 8))]
+                body = "".join(item_html(i, today, week_start, False, new_from) for i in shown) or                     '<p class="empty">Rien de récent pour le moment.</p>'
+                link = (f'<a class="ext" href="{esc(src["homepage"])}" target="_blank" rel="noopener noreferrer">Site ↗</a>'
+                        if src.get("homepage") else "")
+                blocks.append(f'<section class="journal" data-group><header><h2>{esc(src["name"])}</h2>{link}</header>'
+                              f'<p class="note">{esc(source_note(src, mine, status.get(src["id"], {})))}</p>{body}</section>')
+            if blocks:
+                parts.append(f'<div data-group data-gid="{esc(grp["id"])}"><h2 class="grp">{esc(grp["title"])}</h2>{"".join(blocks)}</div>')
+        manual = tab.get("manual", [])
+        if manual:
+            lis = "".join(f'<li><a href="{esc(m["url"])}" target="_blank" rel="noopener noreferrer">{esc(m["name"])} ↗</a>'
+                          f'<span>{esc(m.get("note", ""))}</span></li>' for m in manual)
+            parts.append('<div class="manual" data-gid="manual"><h2 class="grp">À consulter à la main</h2>'
+                         '<p class="note">Ces sites n’offrent ni flux ni page lisible par robot : pas de mise à jour automatique.</p>'
+                         f'<ul>{lis}</ul></div>')
+        badge = f' <span class="n" title="nouveautés {esc(period)}">{n_new}</span>' if n_new else ""
+        tab_buttons.append(f'<button role="tab" id="t-{tid}" aria-controls="p-{tid}" data-tab="{tid}">{esc(tab["label"])}{badge}</button>')
+        tab_panels.append(
+            f'<section class="panel" role="tabpanel" id="p-{tid}" aria-labelledby="t-{tid}" data-panel="{tid}">'
+            f'<h2 class="ph">{esc(tab["title"])} <small>{esc(tab.get("sub", ""))}</small></h2>{"".join(parts)}'
+            '<p class="nomatch" hidden>Aucun résultat avec ces filtres.</p></section>')
+        tab_options.append(f'<optgroup label="{esc(tab["label"])}">'
+                           + "".join(f'<option value="{esc(r["id"])}">{esc(r["name"])}</option>' for r in tsrcs) + '</optgroup>')
 
     # --- barre de contrôle
     default_tab = "aujourdhui" if in_today else "semaine"
     opts_revue = "".join(f'<option value="{esc(r["id"])}">{esc(r["name"])}</option>' for r in revues)
     opts_news = "".join(f'<option value="{esc(r["id"])}">{esc(r["name"])}</option>'
                         for r in cfg["sources"] if r["kind"] == "news")
-    opts_reprise = "".join(f'<option value="{esc(r["id"])}">{esc(r["name"])}</option>' for r in reprise_srcs)
     controls = f"""
 <div class="bar"><div class="wrap bar-in">
   <div class="tabs" role="tablist" aria-label="Période">
     <button role="tab" id="t-aujourdhui" aria-controls="p-aujourdhui" data-tab="aujourdhui">Aujourd’hui <span class="n">{len(in_today)}</span></button>
     <button role="tab" id="t-semaine" aria-controls="p-semaine" data-tab="semaine">Cette semaine <span class="n">{len(in_week)}</span></button>
     <button role="tab" id="t-revues" aria-controls="p-revues" data-tab="revues">Revues{f' <span class="n" title="nouvelles publications cette semaine">{new_revue}</span>' if new_revue else ''}</button>
-    <button role="tab" id="t-reprise" aria-controls="p-reprise" data-tab="reprise">Reprise MTL{f' <span class="n" title="nouveautés cette semaine">{new_reprise}</span>' if new_reprise else ''}</button>
+    {"".join(tab_buttons)}
   </div>
   <div class="filters">
     <label class="sr" for="q">Rechercher</label>
     <input id="q" type="search" placeholder="Rechercher…" autocomplete="off">
     <label class="sr" for="src">Source</label>
     <select id="src"><option value="">Toutes les sources</option>
-      <optgroup label="Revues">{opts_revue}</optgroup><optgroup label="Reprise MTL">{opts_reprise}</optgroup><optgroup label="Presse">{opts_news}</optgroup></select>
+      <optgroup label="Revues">{opts_revue}</optgroup>{"".join(tab_options)}<optgroup label="Presse">{opts_news}</optgroup></select>
   </div>
 </div></div>"""
 
@@ -659,8 +692,7 @@ def render(cfg: dict, archive: dict, status: dict, now: datetime) -> str:
         f'<h2 class="ph">Cette semaine <small>7 derniers jours</small></h2>{week_body}{week_empty}<p class="nomatch" hidden>Aucun résultat avec ces filtres.</p></section>'
         f'<section class="panel" role="tabpanel" id="p-revues" aria-labelledby="t-revues" data-panel="revues">'
         f'<h2 class="ph">Revues <small>suivies chaque semaine</small></h2>{revues_body}<p class="nomatch" hidden>Aucun résultat avec ces filtres.</p></section>'
-        f'<section class="panel" role="tabpanel" id="p-reprise" aria-labelledby="t-reprise" data-panel="reprise">'
-        f'<h2 class="ph">Reprise d’entreprise · Montréal <small>sites suivis chaque jour</small></h2>{reprise_body}<p class="nomatch" hidden>Aucun résultat avec ces filtres.</p></section>')
+        + "".join(tab_panels))
 
     # --- en-tête et pied de page
     errors = [src["name"] for src in cfg["sources"] if status.get(src["id"], {}).get("ok") is False]
@@ -812,7 +844,7 @@ def main() -> int:
             return 0
     seed = not archive["items"]
     titles = {f'{i["kind"]}:{title_key(i["title"])}': k for k, i in archive["items"].items()
-              if i["kind"] in ("news", "reprise") and len(title_key(i["title"])) >= 20}
+              if i["kind"] != "revue" and len(title_key(i["title"])) >= 20}
     if args.test_alert:
         revues = [i for i in archive["items"].values() if i["kind"] == "revue"]
         if revues:
@@ -829,8 +861,7 @@ def main() -> int:
             st = status.setdefault(src["id"], {})
             try:
                 fetched = FETCHERS[src["type"]](src, archive)
-                keep = {"revue": cfg["settings"]["keep_days_revues"], "reprise": cfg["settings"].get("keep_days_reprise", 120)
-                        }.get(src["kind"], cfg["settings"]["keep_days_news"])
+                keep = keep_days(cfg["settings"], src["kind"])
                 added = merge(archive, src, fetched, today, seed, titles, today - timedelta(days=keep), alerts_on)
                 st.update(ok=True, fetched=len(fetched), added=added, error="", last_success=now.isoformat())
                 log.info("  OK  %-34s %3d récupérés, %3d nouveaux", src["name"], len(fetched), added)

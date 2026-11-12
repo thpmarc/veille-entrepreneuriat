@@ -1,25 +1,113 @@
 {
   "settings": {
     "site_title": "Ma veille",
-    "site_kicker": "Entrepreneuriat · Reprise d’entreprise",
+    "site_kicker": "Entrepreneuriat · Reprise d’entreprise · Finance",
     "schedule_label": "chaque matin",
     "keep_days_news": 90,
     "keep_days_revues": 730,
     "week_days": 7,
     "revue_show": 8,
     "keep_days_reprise": 120,
-    "reprise_groups": [
+    "keep_days_finance": 30,
+    "tabs": [
       {
-        "id": "annonces",
-        "title": "Entreprises à vendre"
+        "id": "reprise",
+        "kind": "reprise",
+        "label": "Reprise MTL",
+        "title": "Reprise d’entreprise · Montréal",
+        "sub": "sites suivis chaque jour",
+        "show": 8,
+        "new_days": 7,
+        "groups": [
+          {
+            "id": "annonces",
+            "title": "Entreprises à vendre",
+            "chip": "À vendre"
+          },
+          {
+            "id": "organismes",
+            "title": "Organismes, conseillers et financeurs",
+            "chip": "Organismes"
+          },
+          {
+            "id": "presse",
+            "title": "Presse",
+            "chip": "Presse"
+          }
+        ],
+        "manual": [
+          {
+            "name": "Index (Repreneuriat Québec)",
+            "url": "https://repreneuriat.quebec/index/",
+            "note": "plateforme confidentielle acheteurs/vendeurs de PME, compte requis"
+          },
+          {
+            "name": "BizBuySell · Québec",
+            "url": "https://www.bizbuysell.com/quebec-canada-businesses-for-sale/",
+            "note": "bloque les robots (erreur 403)"
+          },
+          {
+            "name": "BizQuest · Montréal",
+            "url": "https://www.bizquest.com/businesses-for-sale-in-montreal-qc",
+            "note": "bloque les robots (erreur 403)"
+          },
+          {
+            "name": "Fusacq",
+            "url": "https://www.fusacq.com",
+            "note": "bloque les robots (erreur 403)"
+          },
+          {
+            "name": "Sunbelt Business Brokers · Canada",
+            "url": "https://www.sunbeltnetwork.com/business-search/business-results/country-canada/",
+            "note": "148 annonces canadiennes, listes chargées par JavaScript (non lisible par robot)"
+          },
+          {
+            "name": "BDC · prêt pour acheter ou transférer une entreprise",
+            "url": "https://www.bdc.ca/en/financing/buying-business",
+            "note": "pas de flux, et aucune nouveauté pertinente ne remonte via Google Actualités"
+          },
+          {
+            "name": "Fonds FTQ · acquisition et transfert",
+            "url": "https://www.fondsftq.com/en/business/getting/project-financing/business-transfer-succession",
+            "note": "pas de flux, et aucune nouveauté pertinente ne remonte via Google Actualités"
+          },
+          {
+            "name": "Gouvernement du Québec · repreneuriat",
+            "url": "https://www.quebec.ca/entreprises-et-travailleurs-autonomes/accompagnement-services/repreneuriat",
+            "note": "page de référence, sans nouveautés quotidiennes"
+          },
+          {
+            "name": "Réseau Capital (SADC et CAE)",
+            "url": "https://www.sadc-cae.ca",
+            "note": "financement de la relève, sans flux"
+          }
+        ]
       },
       {
-        "id": "organismes",
-        "title": "Organismes, conseillers et financeurs"
-      },
-      {
-        "id": "presse",
-        "title": "Presse"
+        "id": "finance",
+        "kind": "finance",
+        "label": "Finance",
+        "title": "Finance · Québec, France, international",
+        "sub": "presse et institutions, chaque jour",
+        "show": 5,
+        "new_days": 1,
+        "groups": [
+          {
+            "id": "qc",
+            "title": "Québec et Canada",
+            "chip": "Québec · Canada"
+          },
+          {
+            "id": "fr",
+            "title": "France",
+            "chip": "France"
+          },
+          {
+            "id": "intl",
+            "title": "International",
+            "chip": "International"
+          }
+        ]
       }
     ]
   },
@@ -268,53 +356,275 @@
       "max_items": 20,
       "note": "Google Actualités : « transfert entreprise relève Québec »",
       "match": "\\brepren|\\breleve|transfert d.entreprise|transfert des entreprises|\\bcession|vente d.entreprise|achat d.entreprise|entreprises? a vendre"
-    }
-  ],
-  "manual_sites": [
-    {
-      "name": "Index (Repreneuriat Québec)",
-      "url": "https://repreneuriat.quebec/index/",
-      "note": "plateforme confidentielle acheteurs/vendeurs de PME, compte requis"
     },
     {
-      "name": "BizBuySell · Québec",
-      "url": "https://www.bizbuysell.com/quebec-canada-businesses-for-sale/",
-      "note": "bloque les robots (erreur 403)"
+      "id": "f-boc",
+      "name": "Banque du Canada · communiqués",
+      "kind": "finance",
+      "group": "qc",
+      "type": "rss",
+      "url": "https://www.banqueducanada.ca/content_type/communiques/feed/",
+      "lang": "fr",
+      "max_items": 15,
+      "homepage": "https://www.banqueducanada.ca/salle-de-presse/communiques/",
+      "note": "taux directeur, décisions de politique monétaire"
     },
     {
-      "name": "BizQuest · Montréal",
-      "url": "https://www.bizquest.com/businesses-for-sale-in-montreal-qc",
-      "note": "bloque les robots (erreur 403)"
+      "id": "f-qc-taux",
+      "name": "Taux directeur et politique monétaire",
+      "kind": "finance",
+      "group": "qc",
+      "type": "rss",
+      "url": "https://news.google.com/rss/search?q=Banque+du+Canada+taux+directeur+when%3A14d&hl=fr-CA&gl=CA&ceid=CA:fr",
+      "lang": "fr",
+      "max_items": 20,
+      "aggregator": true,
+      "note": "via Google Actualités : « Banque du Canada taux directeur »"
     },
     {
-      "name": "Fusacq",
-      "url": "https://www.fusacq.com",
-      "note": "bloque les robots (erreur 403)"
+      "id": "f-lapresse",
+      "name": "La Presse · Affaires",
+      "kind": "finance",
+      "group": "qc",
+      "type": "rss",
+      "url": "https://www.lapresse.ca/affaires/rss",
+      "lang": "fr",
+      "max_items": 20,
+      "homepage": "https://www.lapresse.ca/affaires"
     },
     {
-      "name": "Sunbelt Business Brokers · Canada",
-      "url": "https://www.sunbeltnetwork.com/business-search/business-results/country-canada/",
-      "note": "148 annonces canadiennes, listes chargées par JavaScript (non lisible par robot)"
+      "id": "f-devoir",
+      "name": "Le Devoir · Économie",
+      "kind": "finance",
+      "group": "qc",
+      "type": "rss",
+      "url": "https://www.ledevoir.com/rss/section/economie.xml",
+      "lang": "fr",
+      "max_items": 20,
+      "homepage": "https://www.ledevoir.com/economie"
     },
     {
-      "name": "BDC · prêt pour acheter ou transférer une entreprise",
-      "url": "https://www.bdc.ca/en/financing/buying-business",
-      "note": "pas de flux, et aucune nouveauté pertinente ne remonte via Google Actualités"
+      "id": "f-jdm",
+      "name": "Journal de Montréal · Argent",
+      "kind": "finance",
+      "group": "qc",
+      "type": "rss",
+      "url": "https://www.journaldemontreal.com/argent/rss.xml",
+      "lang": "fr",
+      "max_items": 20,
+      "homepage": "https://www.journaldemontreal.com/argent"
     },
     {
-      "name": "Fonds FTQ · acquisition et transfert",
-      "url": "https://www.fondsftq.com/en/business/getting/project-financing/business-transfer-succession",
-      "note": "pas de flux, et aucune nouveauté pertinente ne remonte via Google Actualités"
+      "id": "f-qc-pme",
+      "name": "Financement des PME au Québec",
+      "kind": "finance",
+      "group": "qc",
+      "type": "rss",
+      "url": "https://news.google.com/rss/search?q=financement+PME+Qu%C3%A9bec+subvention+OR+pr%C3%AAt+OR+taux+when%3A14d&hl=fr-CA&gl=CA&ceid=CA:fr",
+      "lang": "fr",
+      "max_items": 20,
+      "aggregator": true,
+      "note": "via Google Actualités : financement, subventions et prêts"
     },
     {
-      "name": "Gouvernement du Québec · repreneuriat",
-      "url": "https://www.quebec.ca/entreprises-et-travailleurs-autonomes/accompagnement-services/repreneuriat",
-      "note": "page de référence, sans nouveautés quotidiennes"
+      "id": "f-qc-fisc",
+      "name": "Fiscalité des entrepreneurs (Québec, Canada)",
+      "kind": "finance",
+      "group": "qc",
+      "type": "rss",
+      "url": "https://news.google.com/rss/search?q=fiscalit%C3%A9+OR+imp%C3%B4t+entrepreneurs+OR+PME+OR+%22travailleurs+autonomes%22+Qu%C3%A9bec+OR+Canada+when%3A30d&hl=fr-CA&gl=CA&ceid=CA:fr",
+      "lang": "fr",
+      "max_items": 20,
+      "aggregator": true,
+      "note": "via Google Actualités : fiscalité, budgets, travailleurs autonomes"
     },
     {
-      "name": "Réseau Capital (SADC et CAE)",
-      "url": "https://www.sadc-cae.ca",
-      "note": "financement de la relève, sans flux"
+      "id": "f-lemonde",
+      "name": "Le Monde · Économie",
+      "kind": "finance",
+      "group": "fr",
+      "type": "rss",
+      "url": "https://www.lemonde.fr/economie/rss_full.xml",
+      "lang": "fr",
+      "max_items": 20,
+      "homepage": "https://www.lemonde.fr/economie/"
+    },
+    {
+      "id": "f-figaro",
+      "name": "Le Figaro · Économie",
+      "kind": "finance",
+      "group": "fr",
+      "type": "rss",
+      "url": "https://www.lefigaro.fr/rss/figaro_economie.xml",
+      "lang": "fr",
+      "max_items": 20,
+      "homepage": "https://www.lefigaro.fr/economie"
+    },
+    {
+      "id": "f-bfm",
+      "name": "BFM · Économie",
+      "kind": "finance",
+      "group": "fr",
+      "type": "rss",
+      "url": "https://www.bfmtv.com/rss/economie/",
+      "lang": "fr",
+      "max_items": 20,
+      "homepage": "https://www.bfmtv.com/economie/"
+    },
+    {
+      "id": "f-lesechos",
+      "name": "Les Échos · finance et marchés",
+      "kind": "finance",
+      "group": "fr",
+      "type": "rss",
+      "url": "https://news.google.com/rss/search?q=site%3Alesechos.fr+%28finance+OR+bourse+OR+banque+OR+taux+OR+%C3%A9conomie%29+when%3A3d&hl=fr&gl=FR&ceid=FR:fr",
+      "lang": "fr",
+      "max_items": 20,
+      "homepage": "https://www.lesechos.fr/finance-marches",
+      "aggregator": true,
+      "show": 6,
+      "note": "via Google Actualités : titres des Échos (abonnement pour lire la suite)"
+    },
+    {
+      "id": "f-jdn-eco",
+      "name": "JDN · Économie",
+      "kind": "finance",
+      "group": "fr",
+      "type": "rss",
+      "url": "https://www.journaldunet.com/economie/rss/",
+      "lang": "fr",
+      "max_items": 20,
+      "homepage": "https://www.journaldunet.com/economie/"
+    },
+    {
+      "id": "f-amf-fr",
+      "name": "AMF (France) · marchés financiers",
+      "kind": "finance",
+      "group": "fr",
+      "type": "rss",
+      "url": "https://www.amf-france.org/fr/flux-rss/display/21",
+      "lang": "fr",
+      "max_items": 15,
+      "homepage": "https://www.amf-france.org/fr",
+      "note": "Autorité des marchés financiers : actualités, décisions, webinaires"
+    },
+    {
+      "id": "f-bdf",
+      "name": "Banque de France",
+      "kind": "finance",
+      "group": "fr",
+      "type": "rss",
+      "url": "https://news.google.com/rss/search?q=site%3Abanque-france.fr+when%3A60d&hl=fr&gl=FR&ceid=FR:fr",
+      "lang": "fr",
+      "max_items": 10,
+      "homepage": "https://www.banque-france.fr",
+      "aggregator": true,
+      "note": "via Google Actualités : le site bloque les robots (403) et n’a pas de flux"
+    },
+    {
+      "id": "f-fr-pme",
+      "name": "Financement des PME en France",
+      "kind": "finance",
+      "group": "fr",
+      "type": "rss",
+      "url": "https://news.google.com/rss/search?q=financement+PME+France+pr%C3%AAt+OR+tr%C3%A9sorerie+OR+d%C3%A9faillances+when%3A14d&hl=fr&gl=FR&ceid=FR:fr",
+      "lang": "fr",
+      "max_items": 20,
+      "aggregator": true,
+      "note": "via Google Actualités : crédit, trésorerie, défaillances"
+    },
+    {
+      "id": "f-fr-fisc",
+      "name": "Fiscalité des indépendants (France)",
+      "kind": "finance",
+      "group": "fr",
+      "type": "rss",
+      "url": "https://news.google.com/rss/search?q=fiscalit%C3%A9+entrepreneurs+France+ind%C3%A9pendants+micro-entrepreneur+imp%C3%B4t+when%3A30d&hl=fr&gl=FR&ceid=FR:fr",
+      "lang": "fr",
+      "max_items": 20,
+      "aggregator": true,
+      "note": "via Google Actualités : Urssaf, micro-entreprise, TVA, impôts"
+    },
+    {
+      "id": "f-ecb",
+      "name": "Banque centrale européenne",
+      "kind": "finance",
+      "group": "intl",
+      "type": "rss",
+      "url": "https://www.ecb.europa.eu/rss/press.xml",
+      "lang": "en",
+      "max_items": 15,
+      "homepage": "https://www.ecb.europa.eu/press/",
+      "note": "communiqués, discours, entretiens (anglais)"
+    },
+    {
+      "id": "f-fed",
+      "name": "Réserve fédérale américaine",
+      "kind": "finance",
+      "group": "intl",
+      "type": "rss",
+      "url": "https://www.federalreserve.gov/feeds/press_all.xml",
+      "lang": "en",
+      "max_items": 15,
+      "homepage": "https://www.federalreserve.gov/newsevents.htm",
+      "note": "communiqués de presse (anglais)"
+    },
+    {
+      "id": "f-economist",
+      "name": "The Economist · Finance & economics",
+      "kind": "finance",
+      "group": "intl",
+      "type": "rss",
+      "url": "https://www.economist.com/finance-and-economics/rss.xml",
+      "lang": "en",
+      "max_items": 15,
+      "homepage": "https://www.economist.com/finance-and-economics"
+    },
+    {
+      "id": "f-ft",
+      "name": "Financial Times",
+      "kind": "finance",
+      "group": "intl",
+      "type": "rss",
+      "url": "https://www.ft.com/rss/home",
+      "lang": "en",
+      "max_items": 10,
+      "homepage": "https://www.ft.com",
+      "note": "titres seulement (abonnement pour lire la suite)"
+    },
+    {
+      "id": "f-rfi",
+      "name": "RFI · Économie",
+      "kind": "finance",
+      "group": "intl",
+      "type": "rss",
+      "url": "https://www.rfi.fr/fr/economie/rss",
+      "lang": "fr",
+      "max_items": 20,
+      "homepage": "https://www.rfi.fr/fr/economie/"
+    },
+    {
+      "id": "f-f24",
+      "name": "France 24 · Éco-Tech",
+      "kind": "finance",
+      "group": "intl",
+      "type": "rss",
+      "url": "https://www.france24.com/fr/%C3%A9co-tech/rss",
+      "lang": "fr",
+      "max_items": 20,
+      "homepage": "https://www.france24.com/fr/%C3%A9co-tech/"
+    },
+    {
+      "id": "f-fmi",
+      "name": "FMI, OCDE, Banque mondiale",
+      "kind": "finance",
+      "group": "intl",
+      "type": "rss",
+      "url": "https://news.google.com/rss/search?q=FMI+OR+OCDE+OR+%22Banque+mondiale%22+pr%C3%A9visions+croissance+when%3A7d&hl=fr&gl=FR&ceid=FR:fr",
+      "lang": "fr",
+      "max_items": 20,
+      "aggregator": true,
+      "note": "via Google Actualités : perspectives et prévisions économiques mondiales"
     }
   ]
 }

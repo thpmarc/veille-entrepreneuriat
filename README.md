@@ -42,10 +42,15 @@ puis ouvrir `site/index.html`. `--if-stale HEURES` saute la mise à jour si la d
 Une revue publie rarement : « Cette semaine » y affiche ce qui est **nouveau pour vous** (détecté lors d'une mise à jour),
 l'onglet « Revues » montre toujours les 8 dernières parutions de chacune.
 
-## Reprise d'entreprise à Montréal (onglet « Reprise MTL »)
+## Onglets-sections (« Reprise MTL », « Finance »)
 
-Sources de `sources.json` avec `"kind": "reprise"`, rangées par `"group"` (annonces / organismes / presse). Ces articles
-n'apparaissent pas dans « Aujourd'hui » ni « Cette semaine » : l'onglet a ses propres sections, comme « Revues ».
+Chaque onglet-section est décrit dans `settings.tabs` de `sources.json` (`id`, `kind`, `label`, `title`, `groups`, `show`,
+`new_days`, `manual`). Les sources qui portent le même `"kind"` y sont rangées par `"group"`, une section par source. Leurs
+articles n'apparaissent pas dans « Aujourd'hui » ni « Cette semaine ». Pour ajouter un onglet : une entrée dans `tabs`,
+des sources avec ce `kind`, et `keep_days_<kind>` dans `settings` (sinon la durée de la presse s'applique).
+Un clic sur un titre, ou sur « Marquer lu », atténue l'élément (état gardé dans le navigateur, pas synchronisé).
+
+### Reprise d'entreprise à Montréal (`kind: reprise`)
 
 | Source | Méthode |
 |---|---|
@@ -61,6 +66,19 @@ n'apparaissent pas dans « Aujourd'hui » ni « Cette semaine » : l'onglet a se
   Sunbelt, BDC, Fonds FTQ…), affichés en liste « À consulter à la main », sans mise à jour automatique.
 - Premier passage d'une nouvelle source : ses éléments ne sont pas « Nouveaux » (annonces sans date marquées `baseline`).
 - Test sans toucher aux autres sources : `python build_site.py --only r-aps,r-pmemtl`.
+
+### Finance : Québec, France, international (`kind: finance`)
+
+Sources en trois groupes. « Nouveau » = détecté aujourd'hui (`new_days: 1`), conservation 30 jours (`keep_days_finance`).
+
+| Groupe | Sources |
+|---|---|
+| Québec et Canada | Banque du Canada (flux des communiqués), La Presse Affaires, Le Devoir Économie, Journal de Montréal Argent, et 3 requêtes Google Actualités (taux directeur, financement des PME, fiscalité des entrepreneurs) |
+| France | Le Monde Économie, Le Figaro Économie, BFM Économie, JDN Économie, AMF (flux), et Google Actualités : Les Échos (`site:lesechos.fr`, pas de flux), Banque de France (`site:`, le site renvoie 403), financement des PME, fiscalité des indépendants |
+| International | BCE, Réserve fédérale, The Economist, Financial Times (titres), RFI Économie, France 24 Éco-Tech, et Google Actualités FMI/OCDE/Banque mondiale |
+
+Écartés : AMF Québec et FMI/OCDE (403), La Tribune, Capital, Boursorama, Zonebourse (pas de flux), Statistique Canada (trop
+généraliste), JDN Finance et épargne (doublon de JDN Économie).
 
 ## Dépannage
 
