@@ -299,7 +299,47 @@ def fetch_revuegestion(src: dict, archive: dict) -> list[dict]:
     return out
 
 
-FETCHERS = {"rss": fetch_rss, "crossref": fetch_crossref, "revuegestion": fetch_revuegestion}
+def _money(txt: str) -> str:
+    """« $1,430,000 » -> « 1 430 000 $ »."""
+    digits = re.sub(r"[^\d]", "", txt)
+    return f"{int(digits):,}".replace(",", " ") + " $" if digits else ""
+
+
+def fetch_aps(src: dict, _archive: dict) -> list[dict]:
+    """Accounting Practice Sales : annonces de cabinets comptables ; on ne garde que celles du Québec."""
+    raw, _ = http_get(src["url"], accept="text/html")
+    try:
+        page = raw.decode("utf-8")
+    except UnicodeDecodeError:                      # le site annonce de l'UTF-8 mais envoie du Windows-1252
+        page = raw.decode("cp1252", errors="replace")
+    out, seen = [], set()
+    for card in re.split(r'<a class="apslistingitem_n\b', page)[1:]:
+        m = re.search(r'href="([^"]+)"', card)
+        name = re.search(r'apslistingitem_lname">(.*?)</div>', card, re.S)
+        if not m or not name:
+            continue
+        url = safe_url(html.unescape(m.group(1)))
+        if "/quebec/" not in url or url in seen:
+            continue
+        seen.add(url)
+        status = re.search(r'apslistingitem_lstatus">(.*?)</div>', card, re.S)
+        stats = {clean_text(k): clean_text(v) for k, v in re.findall(
+            r'listingstattitle">(.*?)</div><div class="listingstatinfo">(.*?)</div>', card, re.S)}
+        parts = []
+        for prefix, label in (("chiffre", "Chiffre d’affaires"), ("prix", "Prix demandé")):
+            val = next((v for k, v in stats.items() if norm(k).startswith(prefix)), "")
+            if _money(val):
+                parts.append(f"{label} {_money(val)}")
+        kind = next((v for k, v in stats.items() if norm(k).startswith("type")), "")
+        if kind:
+            parts.append(re.sub(r"\bcpa\b", "CPA", kind.capitalize(), flags=re.I))
+        tags = [clean_text(status.group(1))] if status and "attente" in norm(status.group(1)) else []   # « Vente en attente »
+        out.append({"title": clean_text(name.group(1)), "url": url, "summary": " · ".join(parts), "authors": "",
+                    "tags": tags, "name": src["name"], "published": None, "date_only": True})
+    return out
+
+
+FETCHERS = {"rss": fetch_rss, "crossref": fetch_crossref, "revuegestion": fetch_revuegestion, "aps": fetch_aps}
 
 
 # --------------------------------------------------------------------------- archive
@@ -337,9 +377,15 @@ def merge(archive: dict, src: dict, fetched: list[dict], today: date, seed: bool
           alerts_on: bool = False) -> int:
     items, added = archive["items"], 0
     now_iso = datetime.now(timezone.utc).isoformat()
+    live_keys = {url_key(f["url"]) for f in fetched}
+    # nouvelle source dans une archive déjà remplie : son premier passage est aussi un « amorçage »
+    first_run = seed or not any(it["source"] == src["id"] for it in items.values())
     # on filtre d'abord (mots-clés, ancienneté), puis on garde les plus récents
     if src.get("filter"):
         fetched = [f for f in fetched if KEYWORDS.search(norm(f["title"] + " " + f.get("summary", "")))]
+    if src.get("match"):                                    # expression propre à la source (texte sans accents)
+        rx = re.compile(src["match"])
+        fetched = [f for f in fetched if rx.search(norm(f["title"] + " " + f.get("summary", "")))]
     fetched = [f for f in fetched if (local_day(f.get("published"), f["date_only"]) or today) >= oldest]
     fetched.sort(key=lambda f: f.get("published") or "", reverse=True)
     for f in fetched[: src.get("max_items", 30)]:
@@ -355,29 +401,41 @@ def merge(archive: dict, src: dict, fetched: list[dict], today: date, seed: bool
                 existing["published"], existing["date_only"] = f["published"], f["date_only"]
             continue
         tk = title_key(f["title"])
-        if src["kind"] == "news" and len(tk) >= 20 and tk in titles:
+        tkey = f'{src["kind"]}:{tk}'                        # la presse et l'onglet « reprise » se dédoublonnent chacun de leur côté
+        dedupe = src["kind"] in ("news", "reprise") and len(tk) >= 20
+        if dedupe and tkey in titles:
             continue                                        # même article déjà vu via une autre source
-        if seed:        # premier lancement : on date la « découverte » à la parution, sinon tout serait « nouveau »
+        if first_run:   # premier lancement : on date la « découverte » à la parution, sinon tout serait « nouveau »
             first_seen = (local_day(f.get("published"), f["date_only"]) or today).isoformat()
         else:
             first_seen = today.isoformat()
         items[key] = {**f, "key": key, "source": src["id"], "kind": src["kind"],
                       "lang": src.get("lang", "fr"), "first_seen": first_seen, "added": now_iso}
-        if src["kind"] == "news" and len(tk) >= 20:
-            titles[tk] = key
+        if first_run and not f.get("published"):
+            items[key]["baseline"] = True                   # annonce déjà en ligne avant la veille : pas « nouvelle »
+        if dedupe:
+            titles[tkey] = key
         if alerts_on and src["kind"] == "revue" and not seed:
             items[key]["alert"] = "pending"             # « à envoyer » : reste en attente tant que l'issue n'est pas créée
         added += 1
+    if src.get("live") and live_keys:                       # annonces : celles qui ont quitté le site disparaissent d'ici
+        gone = [k for k, it in items.items() if it["source"] == src["id"] and k not in live_keys]
+        for k in gone:
+            del items[k]
+        if gone:
+            log.info("      %d annonce(s) retirée(s) (plus en ligne sur %s)", len(gone), src["name"])
     return added
 
 
 def prune(archive: dict, cfg: dict, today: date) -> int:
     s = cfg["settings"]
-    limits = {"news": today - timedelta(days=s["keep_days_news"]), "revue": today - timedelta(days=s["keep_days_revues"])}
+    limits = {"news": today - timedelta(days=s["keep_days_news"]), "revue": today - timedelta(days=s["keep_days_revues"]),
+              "reprise": today - timedelta(days=s.get("keep_days_reprise", 120))}
     known = {src["id"] for src in cfg["sources"]}
+    live = {src["id"] for src in cfg["sources"] if src.get("live")}     # annonces : retirées quand elles quittent le site, pas par l'âge
     drop = [k for k, it in archive["items"].items()
             if it["source"] not in known                      # source retirée de sources.json
-            or (eff_day(it, today) or today) < limits.get(it["kind"], limits["news"])]
+            or (it["source"] not in live and (eff_day(it, today) or today) < limits.get(it["kind"], limits["news"]))]
     for k in drop:
         del archive["items"][k]
     return len(drop)
@@ -424,6 +482,11 @@ def item_html(it: dict, today: date, week_start: date, show_date: bool) -> str:
     if it["kind"] == "revue":
         if pd:
             meta.append(f"<span>Paru le {fmt_short(pd)}</span>")
+    elif it["kind"] == "reprise":                           # onglet sans regroupement par jour : toujours la date
+        if pd:
+            meta.append(f"<span>{fmt_short(pd)}</span>")
+        elif not it.get("baseline"):
+            meta.append(f"<span>Détectée le {fmt_short(date.fromisoformat(it['first_seen']))}</span>")
     elif it.get("published") and not it.get("date_only"):
         dt = min(parse_dt(it["published"]), datetime.now(timezone.utc)).astimezone()
         label = dt.strftime("%H:%M")
@@ -432,7 +495,7 @@ def item_html(it: dict, today: date, week_start: date, show_date: bool) -> str:
         meta.append(f'<time datetime="{esc(dt.isoformat())}">{label}</time>')
     elif pd:
         meta.append(f"<span>{fmt_short(pd)}</span>")
-    if it["kind"] == "revue":
+    if it["kind"] in ("revue", "reprise") and not it.get("baseline"):
         first = date.fromisoformat(it["first_seen"])
         if first >= week_start:
             meta.append('<span class="tag new">Nouveau</span>')
@@ -472,9 +535,10 @@ def render(cfg: dict, archive: dict, status: dict, now: datetime) -> str:
             return now.astimezone(timezone.utc) - parse_dt(it["published"]) <= timedelta(hours=24)
         return it["_day"] == today
 
-    in_week = sorted((i for i in all_items if i["_day"] and week_start <= i["_day"] <= today),
+    feed_items = [i for i in all_items if i["kind"] != "reprise"]          # l'onglet « Reprise MTL » a ses propres sections
+    in_week = sorted((i for i in feed_items if i["_day"] and week_start <= i["_day"] <= today),
                      key=lambda i: i["_sort"], reverse=True)
-    in_today = sorted((i for i in all_items if is_today(i)), key=lambda i: i["_sort"], reverse=True)
+    in_today = sorted((i for i in feed_items if is_today(i)), key=lambda i: i["_sort"], reverse=True)
 
     # --- panneau « Aujourd'hui »
     if in_today:
@@ -521,24 +585,67 @@ def render(cfg: dict, archive: dict, status: dict, now: datetime) -> str:
             f'<p class="note">{esc(" · ".join(notes))}</p>{body}</section>')
     revues_body = f'<p class="lede">{esc(intro)}</p>' + "".join(sections)
 
+    # --- panneau « Reprise MTL » : annonces, organismes et presse sur la reprise d'entreprise à Montréal
+    reprise_srcs = [src for src in cfg["sources"] if src["kind"] == "reprise"]
+    reprise_items = [i for i in all_items if i["kind"] == "reprise"]
+    new_reprise = sum(1 for i in reprise_items if not i.get("baseline") and date.fromisoformat(i["first_seen"]) >= week_start)
+    reprise_intro = (f"{new_reprise} nouveauté{'s' if new_reprise > 1 else ''} cette semaine sur les sites suivis."
+                     if new_reprise else "Aucune nouveauté cette semaine. Voici les dernières publications de chaque site suivi.")
+    reprise_html = [f'<p class="lede">{esc(reprise_intro)}</p>']
+    for grp in s.get("reprise_groups", []):
+        blocks = []
+        for src in (x for x in reprise_srcs if x.get("group") == grp["id"]):
+            mine = sorted((i for i in reprise_items if i["source"] == src["id"]), key=lambda i: i["_sort"], reverse=True)
+            st = status.get(src["id"], {})
+            notes = [src["note"]] if src.get("note") else []
+            if src.get("live"):
+                notes.append(f"{len(mine)} annonce{'s' if len(mine) > 1 else ''} en ligne")
+            else:
+                latest = max((pub_day(i) for i in mine if pub_day(i)), default=None)
+                if latest:
+                    notes.append(f"Dernière publication : {fmt_short(latest)}")
+            if st.get("ok") is False:
+                notes.append("source momentanément injoignable, dernières données connues")
+            elif st.get("last_success"):
+                notes.append("vérifiée " + ("aujourd’hui" if st["last_success"][:10] == today.isoformat()
+                                             else "le " + fmt_short(date.fromisoformat(st["last_success"][:10]))))
+            body = "".join(item_html(i, today, week_start, False) for i in mine[: src.get("show", s.get("reprise_show", 8))]) or \
+                '<p class="empty">Rien de récent pour le moment.</p>'
+            link = (f'<a class="ext" href="{esc(src["homepage"])}" target="_blank" rel="noopener noreferrer">Site ↗</a>'
+                    if src.get("homepage") else "")
+            blocks.append(f'<section class="journal" data-group><header><h2>{esc(src["name"])}</h2>{link}</header>'
+                          f'<p class="note">{esc(" · ".join(notes))}</p>{body}</section>')
+        if blocks:
+            reprise_html.append(f'<div data-group><h2 class="grp">{esc(grp["title"])}</h2>{"".join(blocks)}</div>')
+    manual = cfg.get("manual_sites", [])
+    if manual:
+        lis = "".join(f'<li><a href="{esc(m["url"])}" target="_blank" rel="noopener noreferrer">{esc(m["name"])} ↗</a>'
+                      f'<span>{esc(m.get("note", ""))}</span></li>' for m in manual)
+        reprise_html.append('<div class="manual"><h2 class="grp">À consulter à la main</h2>'
+                            '<p class="note">Ces sites n’offrent ni flux ni page lisible par robot : pas de mise à jour automatique.</p>'
+                            f'<ul>{lis}</ul></div>')
+    reprise_body = "".join(reprise_html)
+
     # --- barre de contrôle
     default_tab = "aujourdhui" if in_today else "semaine"
     opts_revue = "".join(f'<option value="{esc(r["id"])}">{esc(r["name"])}</option>' for r in revues)
     opts_news = "".join(f'<option value="{esc(r["id"])}">{esc(r["name"])}</option>'
                         for r in cfg["sources"] if r["kind"] == "news")
+    opts_reprise = "".join(f'<option value="{esc(r["id"])}">{esc(r["name"])}</option>' for r in reprise_srcs)
     controls = f"""
 <div class="bar"><div class="wrap bar-in">
   <div class="tabs" role="tablist" aria-label="Période">
     <button role="tab" id="t-aujourdhui" aria-controls="p-aujourdhui" data-tab="aujourdhui">Aujourd’hui <span class="n">{len(in_today)}</span></button>
     <button role="tab" id="t-semaine" aria-controls="p-semaine" data-tab="semaine">Cette semaine <span class="n">{len(in_week)}</span></button>
     <button role="tab" id="t-revues" aria-controls="p-revues" data-tab="revues">Revues{f' <span class="n" title="nouvelles publications cette semaine">{new_revue}</span>' if new_revue else ''}</button>
+    <button role="tab" id="t-reprise" aria-controls="p-reprise" data-tab="reprise">Reprise MTL{f' <span class="n" title="nouveautés cette semaine">{new_reprise}</span>' if new_reprise else ''}</button>
   </div>
   <div class="filters">
     <label class="sr" for="q">Rechercher</label>
     <input id="q" type="search" placeholder="Rechercher…" autocomplete="off">
     <label class="sr" for="src">Source</label>
     <select id="src"><option value="">Toutes les sources</option>
-      <optgroup label="Revues">{opts_revue}</optgroup><optgroup label="Presse">{opts_news}</optgroup></select>
+      <optgroup label="Revues">{opts_revue}</optgroup><optgroup label="Reprise MTL">{opts_reprise}</optgroup><optgroup label="Presse">{opts_news}</optgroup></select>
   </div>
 </div></div>"""
 
@@ -548,7 +655,9 @@ def render(cfg: dict, archive: dict, status: dict, now: datetime) -> str:
         f'<section class="panel" role="tabpanel" id="p-semaine" aria-labelledby="t-semaine" data-panel="semaine">'
         f'<h2 class="ph">Cette semaine <small>7 derniers jours</small></h2>{week_body}{week_empty}<p class="nomatch" hidden>Aucun résultat avec ces filtres.</p></section>'
         f'<section class="panel" role="tabpanel" id="p-revues" aria-labelledby="t-revues" data-panel="revues">'
-        f'<h2 class="ph">Revues <small>suivies chaque semaine</small></h2>{revues_body}<p class="nomatch" hidden>Aucun résultat avec ces filtres.</p></section>')
+        f'<h2 class="ph">Revues <small>suivies chaque semaine</small></h2>{revues_body}<p class="nomatch" hidden>Aucun résultat avec ces filtres.</p></section>'
+        f'<section class="panel" role="tabpanel" id="p-reprise" aria-labelledby="t-reprise" data-panel="reprise">'
+        f'<h2 class="ph">Reprise d’entreprise · Montréal <small>sites suivis chaque jour</small></h2>{reprise_body}<p class="nomatch" hidden>Aucun résultat avec ces filtres.</p></section>')
 
     # --- en-tête et pied de page
     errors = [src["name"] for src in cfg["sources"] if status.get(src["id"], {}).get("ok") is False]
@@ -660,6 +769,8 @@ def main() -> int:
     ap.add_argument("--if-stale", type=float, metavar="HEURES",
                     help="ne rien faire si la dernière mise à jour réussie date de moins de HEURES heures "
                          "(utilisé par la tâche planifiée, déclenchée à plusieurs moments : 7 h 30, ouverture de session, réveil)")
+    ap.add_argument("--only", metavar="ID[,ID...]",
+                    help="ne récupère que ces sources (test) ; les autres gardent leurs données et la fraîcheur n'est pas mise à jour")
     ap.add_argument("--ack-alerts", action="store_true",
                     help="marque les alertes en attente comme envoyées (appelé par le workflow après la création de l'issue)")
     ap.add_argument("--test-alert", action="store_true",
@@ -697,8 +808,8 @@ def main() -> int:
             log.info("Déjà à jour (dernière mise à jour il y a %.1f h) : rien à faire", age.total_seconds() / 3600)
             return 0
     seed = not archive["items"]
-    titles = {title_key(i["title"]): k for k, i in archive["items"].items()
-              if i["kind"] == "news" and len(title_key(i["title"])) >= 20}
+    titles = {f'{i["kind"]}:{title_key(i["title"])}': k for k, i in archive["items"].items()
+              if i["kind"] in ("news", "reprise") and len(title_key(i["title"])) >= 20}
     if args.test_alert:
         revues = [i for i in archive["items"].values() if i["kind"] == "revue"]
         if revues:
@@ -708,18 +819,22 @@ def main() -> int:
         log.info("Mise à jour : %d sources%s", len(cfg["sources"]), " (premier lancement)" if seed else "")
         if not wait_for_network():
             log.warning("  réseau indisponible après 90 s, on tente quand même")
+        only = set(args.only.split(",")) if args.only else None
         for src in cfg["sources"]:
+            if only and src["id"] not in only:
+                continue
             st = status.setdefault(src["id"], {})
             try:
                 fetched = FETCHERS[src["type"]](src, archive)
-                keep = cfg["settings"]["keep_days_revues" if src["kind"] == "revue" else "keep_days_news"]
+                keep = {"revue": cfg["settings"]["keep_days_revues"], "reprise": cfg["settings"].get("keep_days_reprise", 120)
+                        }.get(src["kind"], cfg["settings"]["keep_days_news"])
                 added = merge(archive, src, fetched, today, seed, titles, today - timedelta(days=keep), alerts_on)
                 st.update(ok=True, fetched=len(fetched), added=added, error="", last_success=now.isoformat())
                 log.info("  OK  %-34s %3d récupérés, %3d nouveaux", src["name"], len(fetched), added)
             except Exception as e:                   # une source en panne ne doit pas bloquer les autres
                 st.update(ok=False, error=f"{type(e).__name__}: {e}"[:200])
                 log.warning("  KO  %-34s %s", src["name"], st["error"])
-        if any(status.get(s["id"], {}).get("ok") for s in cfg["sources"]):
+        if not only and any(status.get(s["id"], {}).get("ok") for s in cfg["sources"]):
             meta["last_run"] = now.isoformat()      # si tout a échoué (pas de réseau), le prochain déclencheur réessaiera
         dropped = prune(archive, cfg, today)
         if dropped:

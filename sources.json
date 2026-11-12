@@ -5,7 +5,22 @@
     "keep_days_news": 90,
     "keep_days_revues": 730,
     "week_days": 7,
-    "revue_show": 8
+    "revue_show": 8,
+    "keep_days_reprise": 120,
+    "reprise_groups": [
+      {
+        "id": "annonces",
+        "title": "Entreprises à vendre"
+      },
+      {
+        "id": "organismes",
+        "title": "Organismes, conseillers et financeurs"
+      },
+      {
+        "id": "presse",
+        "title": "Presse"
+      }
+    ]
   },
   "sources": [
     {
@@ -34,7 +49,9 @@
       "name": "Revue Gestion (HEC Montréal)",
       "kind": "revue",
       "type": "revuegestion",
-      "pages": ["https://www.revuegestion.ca/entrepreneuriat/"],
+      "pages": [
+        "https://www.revuegestion.ca/entrepreneuriat/"
+      ],
       "homepage": "https://www.revuegestion.ca",
       "lang": "fr",
       "delay": 2.5,
@@ -52,7 +69,6 @@
       "show_authors": false,
       "max_items": 15
     },
-
     {
       "id": "maddyness",
       "name": "Maddyness",
@@ -130,6 +146,174 @@
       "url": "https://news.google.com/rss/search?q=entrepreneuriat+Qu%C3%A9bec+when%3A7d&hl=fr-CA&gl=CA&ceid=CA:fr",
       "lang": "fr",
       "max_items": 25
+    },
+    {
+      "id": "r-aps",
+      "name": "Accounting Practice Sales · Québec",
+      "kind": "reprise",
+      "group": "annonces",
+      "type": "aps",
+      "url": "https://accountingpracticesales.com/qc-fr/canada/any/",
+      "homepage": "https://accountingpracticesales.com/qc-fr/canada/any/",
+      "lang": "fr",
+      "live": true,
+      "show": 30,
+      "max_items": 60,
+      "note": "cabinets comptables à vendre au Québec ; une annonce disparaît d’ici quand elle quitte le site"
+    },
+    {
+      "id": "r-repreneuriat-quebec",
+      "name": "Repreneuriat Québec",
+      "kind": "reprise",
+      "group": "organismes",
+      "type": "rss",
+      "url": "https://repreneuriat.quebec/feed/",
+      "homepage": "https://repreneuriat.quebec",
+      "lang": "fr",
+      "show_authors": false,
+      "max_items": 20,
+      "note": "webinaires, témoignages et conseils ; la plateforme Index (annonces) exige un compte"
+    },
+    {
+      "id": "r-pmemtl",
+      "name": "PME MTL",
+      "kind": "reprise",
+      "group": "organismes",
+      "type": "rss",
+      "aggregator": true,
+      "url": "https://news.google.com/rss/search?q=site%3Apmemtl.com+when%3A180d&hl=fr-CA&gl=CA&ceid=CA:fr",
+      "homepage": "https://pmemtl.com",
+      "lang": "fr",
+      "max_items": 15,
+      "match": "acheter (une|son|votre|sa) (entreprise|pme)|achat d.entreprise|vendre (une|son|votre|sa) (entreprise|pme)|vente d.entreprise|\\brepren|\\breleve|transfert d.entreprise|transfert de propriete|\\bcession|transmission d.entreprise|acquisition d.entreprise|croitre par acquisition|lettre d.intention|evaluation d.entreprise|valeur de (votre|son) entreprise|entreprise a vendre|entreprises a vendre",
+      "note": "via Google Actualités (le site n’a pas de flux)"
+    },
+    {
+      "id": "r-rcgt",
+      "name": "Raymond Chabot Grant Thornton",
+      "kind": "reprise",
+      "group": "organismes",
+      "type": "rss",
+      "aggregator": true,
+      "url": "https://news.google.com/rss/search?q=site%3Arcgt.com+%28transfert+OR+rel%C3%A8ve+OR+acquisition+OR+vente%29+when%3A180d&hl=fr-CA&gl=CA&ceid=CA:fr",
+      "homepage": "https://www.rcgt.com/fr/conseils/",
+      "lang": "fr",
+      "max_items": 15,
+      "match": "acheter (une|son|votre|sa) (entreprise|pme)|achat d.entreprise|vendre (une|son|votre|sa) (entreprise|pme)|vente d.entreprise|\\brepren|\\breleve|transfert d.entreprise|transfert de propriete|\\bcession|transmission d.entreprise|acquisition d.entreprise|croitre par acquisition|lettre d.intention|evaluation d.entreprise|valeur de (votre|son) entreprise|entreprise a vendre|entreprises a vendre",
+      "note": "via Google Actualités (le site n’a pas de flux)"
+    },
+    {
+      "id": "r-mallette",
+      "name": "Mallette",
+      "kind": "reprise",
+      "group": "organismes",
+      "type": "rss",
+      "aggregator": true,
+      "url": "https://news.google.com/rss/search?q=site%3Amallette.ca+%28transfert+OR+rel%C3%A8ve+OR+acquisition+OR+vente+OR+succession%29+when%3A180d&hl=fr-CA&gl=CA&ceid=CA:fr",
+      "homepage": "https://www.mallette.ca",
+      "lang": "fr",
+      "max_items": 15,
+      "match": "acheter (une|son|votre|sa) (entreprise|pme)|achat d.entreprise|vendre (une|son|votre|sa) (entreprise|pme)|vente d.entreprise|\\brepren|\\breleve|transfert d.entreprise|transfert de propriete|\\bcession|transmission d.entreprise|acquisition d.entreprise|croitre par acquisition|lettre d.intention|evaluation d.entreprise|valeur de (votre|son) entreprise|entreprise a vendre|entreprises a vendre",
+      "note": "via Google Actualités (le site n’a pas de flux)"
+    },
+    {
+      "id": "r-fcei",
+      "name": "FCEI (communiqués)",
+      "kind": "reprise",
+      "group": "organismes",
+      "type": "rss",
+      "url": "https://www.cfib-fcei.ca/fr/medias/rss.xml",
+      "homepage": "https://www.cfib-fcei.ca/fr/medias",
+      "lang": "fr",
+      "max_items": 40,
+      "match": "\\brepren|\\breleve|transfert d.entreprise|\\bcession|transmission|achat d.entreprise|vente d.entreprise",
+      "note": "seuls les communiqués qui parlent de relève ou de transfert d’entreprise"
+    },
+    {
+      "id": "r-presse-qc",
+      "name": "Presse · repreneuriat Québec",
+      "kind": "reprise",
+      "group": "presse",
+      "type": "rss",
+      "aggregator": true,
+      "url": "https://news.google.com/rss/search?q=repreneuriat+Qu%C3%A9bec+when%3A30d&hl=fr-CA&gl=CA&ceid=CA:fr",
+      "lang": "fr",
+      "max_items": 20,
+      "note": "Google Actualités : « repreneuriat Québec »",
+      "match": "\\brepren|\\breleve|transfert d.entreprise|transfert des entreprises|\\bcession|vente d.entreprise|achat d.entreprise|entreprises? a vendre"
+    },
+    {
+      "id": "r-presse-mtl",
+      "name": "Presse · repreneuriat Montréal",
+      "kind": "reprise",
+      "group": "presse",
+      "type": "rss",
+      "aggregator": true,
+      "url": "https://news.google.com/rss/search?q=repreneuriat+Montr%C3%A9al+when%3A60d&hl=fr-CA&gl=CA&ceid=CA:fr",
+      "lang": "fr",
+      "max_items": 20,
+      "note": "Google Actualités : « repreneuriat Montréal »",
+      "match": "\\brepren|\\breleve|transfert d.entreprise|transfert des entreprises|\\bcession|vente d.entreprise|achat d.entreprise|entreprises? a vendre"
+    },
+    {
+      "id": "r-presse-transfert",
+      "name": "Presse · transfert et relève d’entreprise",
+      "kind": "reprise",
+      "group": "presse",
+      "type": "rss",
+      "aggregator": true,
+      "url": "https://news.google.com/rss/search?q=transfert+entreprise+rel%C3%A8ve+Qu%C3%A9bec+when%3A30d&hl=fr-CA&gl=CA&ceid=CA:fr",
+      "lang": "fr",
+      "max_items": 20,
+      "note": "Google Actualités : « transfert entreprise relève Québec »",
+      "match": "\\brepren|\\breleve|transfert d.entreprise|transfert des entreprises|\\bcession|vente d.entreprise|achat d.entreprise|entreprises? a vendre"
+    }
+  ],
+  "manual_sites": [
+    {
+      "name": "Index (Repreneuriat Québec)",
+      "url": "https://repreneuriat.quebec/index/",
+      "note": "plateforme confidentielle acheteurs/vendeurs de PME, compte requis"
+    },
+    {
+      "name": "BizBuySell · Québec",
+      "url": "https://www.bizbuysell.com/quebec-canada-businesses-for-sale/",
+      "note": "bloque les robots (erreur 403)"
+    },
+    {
+      "name": "BizQuest · Montréal",
+      "url": "https://www.bizquest.com/businesses-for-sale-in-montreal-qc",
+      "note": "bloque les robots (erreur 403)"
+    },
+    {
+      "name": "Fusacq",
+      "url": "https://www.fusacq.com",
+      "note": "bloque les robots (erreur 403)"
+    },
+    {
+      "name": "Sunbelt Business Brokers · Canada",
+      "url": "https://www.sunbeltnetwork.com/business-search/business-results/country-canada/",
+      "note": "148 annonces canadiennes, listes chargées par JavaScript (non lisible par robot)"
+    },
+    {
+      "name": "BDC · prêt pour acheter ou transférer une entreprise",
+      "url": "https://www.bdc.ca/en/financing/buying-business",
+      "note": "pas de flux, et aucune nouveauté pertinente ne remonte via Google Actualités"
+    },
+    {
+      "name": "Fonds FTQ · acquisition et transfert",
+      "url": "https://www.fondsftq.com/en/business/getting/project-financing/business-transfer-succession",
+      "note": "pas de flux, et aucune nouveauté pertinente ne remonte via Google Actualités"
+    },
+    {
+      "name": "Gouvernement du Québec · repreneuriat",
+      "url": "https://www.quebec.ca/entreprises-et-travailleurs-autonomes/accompagnement-services/repreneuriat",
+      "note": "page de référence, sans nouveautés quotidiennes"
+    },
+    {
+      "name": "Réseau Capital (SADC et CAE)",
+      "url": "https://www.sadc-cae.ca",
+      "note": "financement de la relève, sans flux"
     }
   ]
 }

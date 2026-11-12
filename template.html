@@ -37,9 +37,10 @@ h1{margin:0;font:700 clamp(2rem,6vw,3rem)/1.05 var(--serif);letter-spacing:-.01e
 /* Barre d'onglets + filtres */
 .bar{position:sticky;top:0;z-index:5;background:var(--bar);backdrop-filter:blur(8px);border-block:1px solid var(--rule)}
 .bar-in{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between;padding-block:8px}
-.tabs{display:flex;gap:4px}
+.tabs{display:flex;gap:4px;max-width:100%;overflow-x:auto;scrollbar-width:none;position:relative}
+.tabs::-webkit-scrollbar{display:none}
 .tabs button{font:600 .92rem/1 var(--sans);color:var(--muted);background:none;border:0;border-bottom:2px solid transparent;
-  padding:12px 10px 10px;cursor:pointer}
+  padding:12px 10px 10px;cursor:pointer;white-space:nowrap}
 .tabs button:hover{color:var(--ink)}
 .tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)}
 .n{display:inline-block;min-width:1.5em;margin-left:.25em;padding:.1em .4em;border-radius:99px;background:var(--chip);
@@ -86,6 +87,15 @@ html.js .panel:not(.on){display:none}
 .ext:hover{text-decoration:underline}
 .note{margin:8px 0 0;font-size:.82rem;color:var(--muted)}
 
+/* Reprise MTL */
+.grp{margin:46px 0 0;font:700 .74rem/1.2 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.grp+.journal{margin-top:14px}
+.manual ul{margin:10px 0 0;padding:0;list-style:none}
+.manual li{display:flex;flex-wrap:wrap;gap:2px 14px;padding:10px 0;border-bottom:1px solid var(--rule)}
+.manual li a{font-weight:600;text-decoration:none}
+.manual li a:hover{text-decoration:underline}
+.manual li span{font-size:.86rem;color:var(--muted)}
+
 /* Pied de page */
 .foot{border-top:1px solid var(--rule);padding:20px 0 48px;color:var(--muted);font-size:.85rem}
 .foot summary{cursor:pointer;font-weight:600}
@@ -124,7 +134,8 @@ html.js .panel:not(.on){display:none}
     tabs.forEach(function(t){
       var on=t.dataset.tab===name;
       t.setAttribute('aria-selected',on); t.tabIndex=on?0:-1;
-      if(on&&focus) t.focus();
+      if(on){var box=t.parentNode; box.scrollLeft=t.offsetLeft-(box.clientWidth-t.offsetWidth)/2;}   // barre défilante sur petit écran
+      if(on&&focus) t.focus({preventScroll:true});
     });
     panels.forEach(function(p){p.classList.toggle('on',p.dataset.panel===name);});
     if(history.replaceState) history.replaceState(null,'','#'+name);

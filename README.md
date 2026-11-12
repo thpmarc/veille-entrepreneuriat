@@ -39,7 +39,27 @@ puis ouvrir `site/index.html`. `--if-stale HEURES` saute la mise à jour si la d
 Une revue publie rarement : « Cette semaine » y affiche ce qui est **nouveau pour vous** (détecté lors d'une mise à jour),
 l'onglet « Revues » montre toujours les 8 dernières parutions de chacune.
 
+## Reprise d'entreprise à Montréal (onglet « Reprise MTL »)
+
+Sources de `sources.json` avec `"kind": "reprise"`, rangées par `"group"` (annonces / organismes / presse). Ces articles
+n'apparaissent pas dans « Aujourd'hui » ni « Cette semaine » : l'onglet a ses propres sections, comme « Revues ».
+
+| Source | Méthode |
+|---|---|
+| Accounting Practice Sales · Québec | lecture de la page d'annonces (`type: aps`), Québec seulement ; `live: true` : une annonce qui quitte le site disparaît d'ici |
+| Repreneuriat Québec | flux RSS (webinaires, témoignages, conseils) |
+| FCEI | flux RSS, filtré sur la relève / le transfert (`match`) |
+| PME MTL, Raymond Chabot Grant Thornton, Mallette | pas de flux : Google Actualités avec `site:domaine`, filtré par `match` |
+| Presse (3 requêtes) | Google Actualités : « repreneuriat Québec », « repreneuriat Montréal », « transfert entreprise relève Québec » |
+
+- `match` : expression régulière appliquée au titre **sans accents ni majuscules**. Mettre `\b` devant `repren` :
+  « entrepreneuriat » contient « repren ».
+- `manual_sites` (fin de `sources.json`) : sites sans flux ni page lisible par robot (Index, BizBuySell, BizQuest, Fusacq,
+  Sunbelt, BDC, Fonds FTQ…), affichés en liste « À consulter à la main », sans mise à jour automatique.
+- Premier passage d'une nouvelle source : ses éléments ne sont pas « Nouveaux » (annonces sans date marquées `baseline`).
+- Test sans toucher aux autres sources : `python build_site.py --only r-aps,r-pmemtl`.
+
 ## Dépannage
 
 - Retirer une source de `sources.json` supprime aussi ses articles de l'archive à la prochaine mise à jour.
-- Sources refusées aux robots (403), non contournées : Bpifrance Le Hub, Les Affaires.
+- Sources refusées aux robots (403), non contournées : Bpifrance Le Hub, Les Affaires, BizBuySell, BizQuest, Fusacq.
